@@ -7,7 +7,7 @@ experienced engineer (plan-first, TDD, git hygiene) and hard-blocks unsafe outpu
 ## Install
 
     npm install            # dev toolchain for tests/typecheck
-    ./install.sh           # symlinks into ~/.pi/agent/
+    ./install.sh           # copies into ~/.pi/agent/
     brew install gitleaks semgrep   # optional, stronger scanning
 
 Authenticate pi with your ChatGPT subscription: run `pi`, then `/login` →
