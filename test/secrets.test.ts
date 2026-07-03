@@ -29,6 +29,37 @@ describe("scanForSecrets", () => {
     expect(scanForSecrets('password = "example-password-123"')).toHaveLength(0);
     expect(scanForSecrets('token = "changeme"')).toHaveLength(0);
   });
+
+  // Finding 1 (HIGH): placeholder check must test matched value, not whole line
+  it("catches real AWS key used as fallback alongside process.env (bypass #1)", () => {
+    const f = scanForSecrets('const key = process.env.API_KEY ?? "AKIAIOSFODNN7REALKEY";');
+    expect(f).toHaveLength(1);
+    expect(f[0].rule).toBe("aws-access-key");
+  });
+  it("catches real AWS key on a line with a comment containing 'example usage' (bypass #2)", () => {
+    const f = scanForSecrets('const k = "AKIAIOSFODNN7REALKEY"; // example usage');
+    expect(f).toHaveLength(1);
+    expect(f[0].rule).toBe("aws-access-key");
+  });
+
+  // Finding 2 (MEDIUM): JSON/YAML quoted-key credential forms
+  it("catches JSON-style api_key credential", () => {
+    const f = scanForSecrets('{ "api_key": "f9a8b7c6d5e4f3a2b1c0" }');
+    expect(f).toHaveLength(1);
+    expect(f[0].rule).toBe("hardcoded-credential");
+  });
+  it("catches JSON-style password credential", () => {
+    const f = scanForSecrets('"password": "realhunter2hunter2"');
+    expect(f).toHaveLength(1);
+    expect(f[0].rule).toBe("hardcoded-credential");
+  });
+
+  // Finding 3 (LOW-MEDIUM): AWS STS temporary keys with ASIA prefix
+  it("catches AWS STS temporary key (ASIA prefix)", () => {
+    const f = scanForSecrets('const key = "ASIAIOSFODNN7EXAMPLE";');
+    expect(f).toHaveLength(1);
+    expect(f[0].rule).toBe("aws-access-key");
+  });
   it("reports correct line numbers", () => {
     const f = scanForSecrets('a = 1\nb = 2\nkey = "AKIAIOSFODNN7EXAMPLE"');
     expect(f[0].line).toBe(3);
