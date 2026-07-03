@@ -41,6 +41,16 @@ Interactive verification steps (to check all gates are working end-to-end):
   - secret scanning on every write/edit and on staged diffs (fail-closed)
   - `git commit` runs the project's lint + tests + gitleaks + semgrep first
   - done gate: agent can't conclude a code change without a passing test run
+
+## Policy file
+
+Drop an `aegis-harness.config.json` file in a target repo to tune the harness
+without editing code. The defaults in this repo show the supported shape:
+- project display name and UI key
+- dangerous-command policy
+- secret rules and placeholder patterns
+- check timeout and extra checks
+- test-run detection words
 - Commands: `/check`, `/secreview`, `/gates on|off|status`
 
 ## Development
