@@ -1,4 +1,4 @@
-# pi-harness — Design Spec
+# senpai — Design Spec
 
 Date: 2026-07-03
 Status: Approved design, pending implementation plan
@@ -24,7 +24,7 @@ without forking pi and without changing how pi is billed or authenticated.
 ## Architecture overview
 
 ```
-pi-harness/                      (this repo, versioned)
+senpai/                      (this repo, versioned)
 ├── install.sh                   symlinks the dirs below into ~/.pi/agent/
 ├── extensions/
 │   ├── persona.ts               system-prompt injection (before_agent_start)
