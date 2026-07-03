@@ -8,9 +8,15 @@ export interface CheckResult {
   output: string;
 }
 
+const COMMAND_EXISTS_CACHE = new Map<string, boolean>();
+
 export function commandExists(bin: string): boolean {
+  const cached = COMMAND_EXISTS_CACHE.get(bin);
+  if (cached !== undefined) return cached;
   const r = spawnSync("which", [bin], { encoding: "utf8" });
-  return r.status === 0;
+  const exists = r.status === 0;
+  COMMAND_EXISTS_CACHE.set(bin, exists);
+  return exists;
 }
 
 export function runChecks(cwd: string, checks: CheckCommand[], timeoutMs = 300_000): CheckResult[] {
@@ -45,6 +51,16 @@ export function runChecks(cwd: string, checks: CheckCommand[], timeoutMs = 300_0
 export function formatFailures(results: CheckResult[]): string {
   const failed = results.filter((r) => !r.ok);
   return failed
-    .map((r) => `Check '${r.name}' failed:\n${r.output || "(no output)"}`)
+    .map((r) => {
+      const hint =
+        r.output.includes("not installed")
+          ? "Suggested fix: install the missing binary or mark the check optional if it is intentionally unavailable."
+          : r.name === "lint"
+            ? "Suggested fix: run the lint command locally and address the reported violations."
+            : r.name === "test"
+              ? "Suggested fix: fix the failing tests or add coverage for the change before retrying."
+              : "Suggested fix: inspect the output above and rerun the check after addressing the failure.";
+      return `Check '${r.name}' failed:\n${r.output || "(no output)"}\n${hint}`;
+    })
     .join("\n\n");
 }
