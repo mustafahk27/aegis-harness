@@ -17,8 +17,8 @@ Authenticate pi with your ChatGPT subscription: run `pi`, then `/login` →
 
 After running `./install.sh`, start (or restart) pi and run `/login` to connect
 your ChatGPT Plus/Pro (Codex) account if you haven't already. Then verify the
-harness loaded with `/check` in any pi session — it should show gate status and
-persona confirmation.
+harness loaded with `/check` in any pi session — it runs the project's check
+suite and reports pass/fail/skip per check, confirming the harness is active.
 
 Interactive verification steps (to check all gates are working end-to-end):
 1. `commit the staged changes with message "init"` in a repo with a failing test
