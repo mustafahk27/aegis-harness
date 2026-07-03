@@ -3,9 +3,9 @@ import { checkDangerous, isGitCommit, isTestRun } from "../extension/lib/command
 
 describe("checkDangerous", () => {
   it("blocks rm -rf on absolute and home paths", () => {
-    expect(checkDangerous("rm -rf /usr/local")).toMatch(/rm -rf/);
-    expect(checkDangerous("rm -rf ~/Documents")).toMatch(/rm -rf/);
-    expect(checkDangerous("rm -rf /")).toMatch(/rm -rf/);
+    expect(checkDangerous("rm -rf /usr/local")).toMatch(/recursive rm|rm -rf/i);
+    expect(checkDangerous("rm -rf ~/Documents")).toMatch(/recursive rm|rm -rf/i);
+    expect(checkDangerous("rm -rf /")).toMatch(/recursive rm|rm -rf/i);
   });
   it("allows rm -rf on relative paths inside the project", () => {
     expect(checkDangerous("rm -rf node_modules")).toBeNull();

@@ -26,7 +26,7 @@ export function checkDangerous(command: string): string | null {
     for (const target of targets) {
       // Dangerous: absolute path, home dir alias, $HOME var, or parent-relative
       if (/^(\/|~|\$HOME|\.\.)/.test(target)) {
-        return `rm -rf on '${target}' is blocked: only relative paths inside the project are allowed.`;
+        return `recursive rm on '${target}' is blocked: only relative paths inside the project are allowed.`;
       }
     }
   }
