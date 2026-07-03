@@ -1,5 +1,6 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { defaultPolicy, type AegisPolicy } from "./policy.js";
 
 export interface CheckCommand {
   name: string;
@@ -29,7 +30,34 @@ const SECURITY_CHECKS: CheckCommand[] = [
   { name: "semgrep", argv: ["semgrep", "scan", "--config", "auto", "--error", "--quiet"], optional: true },
 ];
 
-export function detectStack(cwd: string): Stack {
+const STACK_CACHE = new Map<string, Stack>();
+
+function fileStamp(cwd: string, filename: string): string {
+  const path = join(cwd, filename);
+  if (!existsSync(path)) return `${filename}:missing`;
+  const stats = statSync(path);
+  return `${filename}:${stats.mtimeMs}:${stats.size}`;
+}
+
+function cacheKey(cwd: string, policy: AegisPolicy): string {
+  return [
+    fileStamp(cwd, "package.json"),
+    fileStamp(cwd, "pnpm-lock.yaml"),
+    fileStamp(cwd, "yarn.lock"),
+    fileStamp(cwd, "bun.lockb"),
+    fileStamp(cwd, "bun.lock"),
+    fileStamp(cwd, "pyproject.toml"),
+    fileStamp(cwd, "requirements.txt"),
+    fileStamp(cwd, "requirements-dev.txt"),
+    JSON.stringify(policy.checks),
+  ].join("|");
+}
+
+export function detectStack(cwd: string, policy: AegisPolicy = defaultPolicy()): Stack {
+  const key = cacheKey(cwd, policy);
+  const cached = STACK_CACHE.get(key);
+  if (cached) return cached;
+
   const pkgPath = join(cwd, "package.json");
   if (existsSync(pkgPath)) {
     const checks: CheckCommand[] = [];
@@ -44,17 +72,36 @@ export function detectStack(cwd: string): Stack {
     if (scripts.test && !NPM_PLACEHOLDER.test(scripts.test)) {
       checks.push({ name: "test", argv: [pm, "run", "test"] });
     }
-    return { kind: "node", checks: [...checks, ...SECURITY_CHECKS] };
+    const configuredSecurityChecks = [
+      ...(policy.checks.includeGitleaks ? SECURITY_CHECKS.slice(0, 1) : []),
+      ...(policy.checks.includeSemgrep ? SECURITY_CHECKS.slice(1) : []),
+    ];
+    const stack: Stack = { kind: "node", checks: [...checks, ...policy.checks.extraChecks, ...configuredSecurityChecks] };
+    STACK_CACHE.set(key, stack);
+    return stack;
   }
   if (existsSync(join(cwd, "pyproject.toml")) || existsSync(join(cwd, "requirements.txt"))) {
-    return {
+    const configuredSecurityChecks = [
+      ...(policy.checks.includeGitleaks ? SECURITY_CHECKS.slice(0, 1) : []),
+      ...(policy.checks.includeSemgrep ? SECURITY_CHECKS.slice(1) : []),
+    ];
+    const stack: Stack = {
       kind: "python",
       checks: [
         { name: "lint", argv: ["ruff", "check", "."], optional: true },
         { name: "test", argv: ["python3", "-m", "pytest"], optional: true, okExitCodes: [0, 5] },
-        ...SECURITY_CHECKS,
+        ...policy.checks.extraChecks,
+        ...configuredSecurityChecks,
       ],
     };
+    STACK_CACHE.set(key, stack);
+    return stack;
   }
-  return { kind: "generic", checks: [...SECURITY_CHECKS] };
+  const configuredSecurityChecks = [
+    ...(policy.checks.includeGitleaks ? SECURITY_CHECKS.slice(0, 1) : []),
+    ...(policy.checks.includeSemgrep ? SECURITY_CHECKS.slice(1) : []),
+  ];
+  const stack: Stack = { kind: "generic", checks: [...policy.checks.extraChecks, ...configuredSecurityChecks] };
+  STACK_CACHE.set(key, stack);
+  return stack;
 }
