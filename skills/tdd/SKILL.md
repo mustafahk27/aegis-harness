@@ -14,7 +14,7 @@ Rules:
 - Bug fixes start with a test that reproduces the bug.
 - Test behavior through public interfaces, not internals.
 - Cover the unhappy paths: invalid input, empty input, boundary values, errors.
-- A change is not done until the full suite passes. The senpai done gate will
+- A change is not done until the full suite passes. The Aegis Harness done gate will
   bounce you if you finish without a passing test run — run tests before concluding.
 - If code is genuinely untestable (UI glue, wiring), say so explicitly instead of
   writing a vacuous test.

@@ -20,7 +20,7 @@ interface MockCtx {
   };
 }
 
-function makeCtx(cwd = "/tmp/senpai-smoke", hasUI = false): MockCtx {
+function makeCtx(cwd = "/tmp/aegis-harness-smoke", hasUI = false): MockCtx {
   return {
     hasUI,
     cwd,
@@ -125,7 +125,7 @@ describe("extension smoke tests", () => {
 
     expect(result).toBeDefined();
     expect(result?.block).toBe(true);
-    expect(result?.reason).toMatch(/sudo.*senpai/i);
+    expect(result?.reason).toMatch(/sudo.*aegis harness/i);
   });
 
   it("dangerous-command gate is always on even when gatesEnabled=false (gates off)", async () => {
@@ -261,7 +261,7 @@ describe("extension smoke tests", () => {
 
     expect(api._sentMessages.length).toBeGreaterThan(0);
     const msg = api._sentMessages[0] as { customType: string; content: string };
-    expect(msg.customType).toBe("senpai-done-gate");
+    expect(msg.customType).toBe("aegis-harness-done-gate");
     expect(msg.content).toMatch(/test suite/i);
   });
 

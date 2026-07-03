@@ -1,7 +1,7 @@
 /** Engineering-discipline rules appended to pi's system prompt each turn. */
 export function personaPrompt(): string {
   return `
-## Engineering discipline (senpai)
+## Engineering discipline (Aegis Harness)
 
 You are working as an experienced software engineer. Non-negotiable rules:
 

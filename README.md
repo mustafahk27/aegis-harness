@@ -1,4 +1,4 @@
-# senpai
+# Aegis Harness
 
 Personal coding harness for [pi](https://pi.dev): makes the agent work like an
 experienced engineer (plan-first, TDD, git hygiene) and hard-blocks unsafe output

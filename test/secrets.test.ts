@@ -68,7 +68,7 @@ describe("scanForSecrets", () => {
 
 describe("scanStagedDiff", () => {
   it("finds secrets in staged changes only", () => {
-    const dir = mkdtempSync(join(tmpdir(), "senpai-secrets-"));
+    const dir = mkdtempSync(join(tmpdir(), "aegis-harness-secrets-"));
     const git = (c: string) => execSync(`git ${c}`, { cwd: dir });
     git("init -q");
     git("config user.email t@t.t");
@@ -80,7 +80,7 @@ describe("scanStagedDiff", () => {
     expect(findings[0].rule).toBe("aws-access-key");
   });
   it("returns empty when nothing staged", () => {
-    const dir = mkdtempSync(join(tmpdir(), "senpai-secrets-"));
+    const dir = mkdtempSync(join(tmpdir(), "aegis-harness-secrets-"));
     execSync("git init -q", { cwd: dir });
     expect(scanStagedDiff(dir)).toHaveLength(0);
   });

@@ -1,4 +1,4 @@
-# senpai Implementation Plan
+# Aegis Harness Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -66,7 +66,7 @@ test/
 
 ```json
 {
-  "name": "senpai",
+  "name": "aegis-harness",
   "private": true,
   "type": "module",
   "scripts": {
@@ -115,7 +115,7 @@ Expected: tsc exits 0 (no input files is fine); vitest reports "No test files fo
 
 ```bash
 git add package.json package-lock.json tsconfig.json .gitignore
-git commit -m "chore: scaffold senpai repo with vitest + typescript"
+git commit -m "chore: scaffold aegis-harness repo with vitest + typescript"
 ```
 
 ---
@@ -212,7 +212,7 @@ Expected: FAIL — cannot resolve `../extension/lib/commands.js`
 /** Returns a human-readable block reason, or null if the command is allowed. */
 export function checkDangerous(command: string): string | null {
   if (/(^|\s|;|&&|\|\|)sudo\s/.test(` ${command} `)) {
-    return "sudo is blocked by senpai. Run privileged commands manually.";
+    return "sudo is blocked by Aegis Harness. Run privileged commands manually.";
   }
   // rm -rf (any flag order/combined flags) targeting absolute, home, or parent paths
   const rm = command.match(/\brm\s+(-[a-zA-Z]*[rR][a-zA-Z]*f[a-zA-Z]*|-[a-zA-Z]*f[a-zA-Z]*[rR][a-zA-Z]*)\s+(.+)/);
@@ -327,7 +327,7 @@ describe("scanForSecrets", () => {
 
 describe("scanStagedDiff", () => {
   it("finds secrets in staged changes only", () => {
-    const dir = mkdtempSync(join(tmpdir(), "senpai-secrets-"));
+    const dir = mkdtempSync(join(tmpdir(), "aegis-harness-secrets-"));
     const git = (c: string) => execSync(`git ${c}`, { cwd: dir });
     git("init -q");
     git("config user.email t@t.t");
@@ -339,7 +339,7 @@ describe("scanStagedDiff", () => {
     expect(findings[0].rule).toBe("aws-access-key");
   });
   it("returns empty when nothing staged", () => {
-    const dir = mkdtempSync(join(tmpdir(), "senpai-secrets-"));
+    const dir = mkdtempSync(join(tmpdir(), "aegis-harness-secrets-"));
     execSync("git init -q", { cwd: dir });
     expect(scanStagedDiff(dir)).toHaveLength(0);
   });
@@ -447,7 +447,7 @@ import { describe, expect, it } from "vitest";
 import { detectStack } from "../extension/lib/stack.js";
 
 function tmp(): string {
-  return mkdtempSync(join(tmpdir(), "senpai-stack-"));
+  return mkdtempSync(join(tmpdir(), "aegis-harness-stack-"));
 }
 
 describe("detectStack", () => {
@@ -610,7 +610,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { commandExists, formatFailures, runChecks } from "../extension/lib/checks.js";
 
-const cwd = () => mkdtempSync(join(tmpdir(), "senpai-checks-"));
+const cwd = () => mkdtempSync(join(tmpdir(), "aegis-harness-checks-"));
 
 describe("commandExists", () => {
   it("finds sh, not a nonsense binary", () => {
@@ -915,7 +915,7 @@ Expected: FAIL — cannot resolve module
 /** Engineering-discipline rules appended to pi's system prompt each turn. */
 export function personaPrompt(): string {
   return `
-## Engineering discipline (senpai)
+## Engineering discipline (Aegis Harness)
 
 You are working as an experienced software engineer. Non-negotiable rules:
 
@@ -982,7 +982,7 @@ import { detectStack } from "./lib/stack.js";
 
 function formatSecrets(findings: SecretFinding[]): string {
   const lines = findings.map((f) => `  line ${f.line} [${f.rule}]: ${f.snippet}`).join("\n");
-  return `Blocked by senpai secret gate:\n${lines}\nRemove the secret (use environment variables) and retry.`;
+  return `Blocked by Aegis Harness secret gate:\n${lines}\nRemove the secret (use environment variables) and retry.`;
 }
 
 export default function (pi: ExtensionAPI) {
@@ -1000,11 +1000,11 @@ export default function (pi: ExtensionAPI) {
     const missing = ["gitleaks", "semgrep"].filter((b) => !commandExists(b));
     if (missing.length && ctx.hasUI) {
       ctx.ui.notify(
-        `senpai: ${missing.join(", ")} not installed — falling back to built-in scanning only`,
+        `aegis-harness: ${missing.join(", ")} not installed — falling back to built-in scanning only`,
         "warning",
       );
     }
-    if (ctx.hasUI) ctx.ui.setStatus("senpai", "gates: on");
+    if (ctx.hasUI) ctx.ui.setStatus("aegis-harness", "gates: on");
   });
 
   // --- re-arm the done gate on real user input -------------------------
@@ -1027,17 +1027,17 @@ export default function (pi: ExtensionAPI) {
         try {
           findings = scanStagedDiff(ctx.cwd);
         } catch (err) {
-          return { block: true, reason: `senpai secret scan failed (fail-closed): ${String(err)}` };
+          return { block: true, reason: `Aegis Harness secret scan failed (fail-closed): ${String(err)}` };
         }
         if (findings.length) return { block: true, reason: formatSecrets(findings) };
 
         // Commit gate: full check suite must pass.
-        if (ctx.hasUI) ctx.ui.setStatus("senpai", "running pre-commit checks…");
+        if (ctx.hasUI) ctx.ui.setStatus("aegis-harness", "running pre-commit checks…");
         const results = runChecks(ctx.cwd, detectStack(ctx.cwd).checks);
-        if (ctx.hasUI) ctx.ui.setStatus("senpai", "gates: on");
+        if (ctx.hasUI) ctx.ui.setStatus("aegis-harness", "gates: on");
         const failed = results.filter((r) => !r.ok);
         if (failed.length) {
-          return { block: true, reason: `Commit blocked by senpai.\n${formatFailures(results)}` };
+          return { block: true, reason: `Commit blocked by Aegis Harness.\n${formatFailures(results)}` };
         }
         doneGate.noteTestRun(true); // suite (incl. tests when defined) passed
       }
@@ -1073,9 +1073,9 @@ export default function (pi: ExtensionAPI) {
     if (gatesEnabled && doneGate.shouldBounce()) {
       pi.sendMessage(
         {
-          customType: "senpai-done-gate",
+          customType: "aegis-harness-done-gate",
           content:
-            "senpai done gate: you modified code this session but there was no passing test run afterwards. " +
+            "Aegis Harness done gate: you modified code this session but there was no passing test run afterwards. " +
             "Run the project's test suite now. If tests fail, fix them. If no test covers your change, add one first.",
           display: true,
         },
@@ -1086,7 +1086,7 @@ export default function (pi: ExtensionAPI) {
 
   // --- commands ----------------------------------------------------------
   pi.registerCommand("check", {
-    description: "senpai: run the full check suite for this project",
+    description: "Aegis Harness: run the full check suite for this project",
     handler: async (_args, ctx) => {
       const results = runChecks(ctx.cwd, detectStack(ctx.cwd).checks);
       const summary = results
@@ -1099,7 +1099,7 @@ export default function (pi: ExtensionAPI) {
   });
 
   pi.registerCommand("secreview", {
-    description: "senpai: security-review the current uncommitted diff",
+    description: "Aegis Harness: security-review the current uncommitted diff",
     handler: async (_args, ctx) => {
       await ctx.waitForIdle();
       pi.sendUserMessage(
@@ -1109,14 +1109,14 @@ export default function (pi: ExtensionAPI) {
   });
 
   pi.registerCommand("gates", {
-    description: "senpai: on|off|status — toggle commit/secret/done gates (dangerous-command gate always on)",
+    description: "Aegis Harness: on|off|status — toggle commit/secret/done gates (dangerous-command gate always on)",
     handler: async (args, ctx) => {
       const arg = (args ?? "").trim();
       if (arg === "on") gatesEnabled = true;
       else if (arg === "off") gatesEnabled = false;
-      ctx.ui.setStatus("senpai", `gates: ${gatesEnabled ? "on" : "OFF"}`);
+      ctx.ui.setStatus("aegis-harness", `gates: ${gatesEnabled ? "on" : "OFF"}`);
       ctx.ui.notify(
-        `senpai gates ${gatesEnabled ? "ON" : "OFF — commit/secret/done gates disabled until /gates on or session restart"}`,
+        `Aegis Harness gates ${gatesEnabled ? "ON" : "OFF — commit/secret/done gates disabled until /gates on or session restart"}`,
         gatesEnabled ? "info" : "warning",
       );
     },
@@ -1134,12 +1134,12 @@ Expected: exit 0. If `ctx.ui.notify` severity `"warning"` is not in the type, ch
 Requires pi installed (`npm i -g @earendil-works/pi` or per pi.dev quickstart) and logged in. In a scratch dir:
 
 ```bash
-mkdir -p /tmp/senpai-smoke && cd /tmp/senpai-smoke && git init -q
+mkdir -p /tmp/aegis-harness-smoke && cd /tmp/aegis-harness-smoke && git init -q
 pi -e /Users/mustafakhan/Documents/senpai/extension/index.ts
 ```
 
 Then in the pi session:
-1. Prompt: `run the command: sudo ls` → expect the tool call to be blocked with the senpai sudo reason.
+1. Prompt: `run the command: sudo ls` → expect the tool call to be blocked with the Aegis Harness sudo reason.
 2. Prompt: `write a file creds.ts containing const key = "AKIAIOSFODNN7EXAMPLE"` → expect blocked by secret gate.
 3. Run `/check` → expect a PASS/SKIP summary (gitleaks/semgrep may be SKIP).
 4. Run `/gates off` then `/gates status` → expect "gates: OFF" status.
@@ -1213,7 +1213,7 @@ Rules:
 - Bug fixes start with a test that reproduces the bug.
 - Test behavior through public interfaces, not internals.
 - Cover the unhappy paths: invalid input, empty input, boundary values, errors.
-- A change is not done until the full suite passes. The senpai done gate will
+- A change is not done until the full suite passes. The Aegis Harness done gate will
   bounce you if you finish without a passing test run — run tests before concluding.
 - If code is genuinely untestable (UI glue, wiring), say so explicitly instead of
   writing a vacuous test.
@@ -1234,7 +1234,7 @@ description: Use when committing, branching, or preparing changes for review. Co
 - **Commits.** One logical change per commit. The project must build and pass tests
   at every commit. Message format: imperative summary line under 72 chars
   (`feat: add rate limiter to login endpoint`), body only when the why isn't obvious.
-- **Never commit:** secrets or credentials (the senpai secret gate blocks these),
+- **Never commit:** secrets or credentials (the Aegis Harness secret gate blocks these),
   generated artifacts, dependencies, editor junk, commented-out code.
 - **Before committing:** run the checks (`/check`), read your own staged diff
   (`git diff --cached`) top to bottom.
@@ -1351,12 +1351,12 @@ PI_DIR="${HOME}/.pi/agent"
 
 mkdir -p "${PI_DIR}/extensions" "${PI_DIR}/skills"
 
-ln -sfn "${REPO_DIR}/extension" "${PI_DIR}/extensions/senpai"
-ln -sfn "${REPO_DIR}/skills" "${PI_DIR}/skills/senpai"
+ln -sfn "${REPO_DIR}/extension" "${PI_DIR}/extensions/aegis-harness"
+ln -sfn "${REPO_DIR}/skills" "${PI_DIR}/skills/aegis-harness"
 
-echo "senpai installed:"
-echo "  ${PI_DIR}/extensions/senpai -> ${REPO_DIR}/extension"
-echo "  ${PI_DIR}/skills/senpai     -> ${REPO_DIR}/skills"
+echo "aegis-harness installed:"
+echo "  ${PI_DIR}/extensions/aegis-harness -> ${REPO_DIR}/extension"
+echo "  ${PI_DIR}/skills/aegis-harness     -> ${REPO_DIR}/skills"
 echo "Optional but recommended: brew install gitleaks semgrep"
 echo "Start pi (or /reload in a running session) to activate."
 ```
@@ -1366,7 +1366,7 @@ Run: `chmod +x install.sh`
 - [ ] **Step 2: Write README.md**
 
 ```markdown
-# senpai
+# Aegis Harness
 
 Personal coding harness for [pi](https://pi.dev): makes the agent work like an
 experienced engineer (plan-first, TDD, git hygiene) and hard-blocks unsafe output
@@ -1409,7 +1409,7 @@ Expected: both symlinks exist and point into the repo.
 - [ ] **Step 4: End-to-end verification in a fixture repo**
 
 ```bash
-mkdir -p /tmp/senpai-e2e && cd /tmp/senpai-e2e && git init -q
+mkdir -p /tmp/aegis-harness-e2e && cd /tmp/aegis-harness-e2e && git init -q
 git config user.email t@t.t && git config user.name t
 cat > package.json <<'EOF'
 { "name": "fixture", "scripts": { "test": "node test.js" } }

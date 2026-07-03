@@ -10,7 +10,7 @@ description: Use when committing, branching, or preparing changes for review. Co
 - **Commits.** One logical change per commit. The project must build and pass tests
   at every commit. Message format: imperative summary line under 72 chars
   (`feat: add rate limiter to login endpoint`), body only when the why isn't obvious.
-- **Never commit:** secrets or credentials (the senpai secret gate blocks these),
+- **Never commit:** secrets or credentials (the Aegis Harness secret gate blocks these),
   generated artifacts, dependencies, editor junk, commented-out code.
 - **Before committing:** run the checks (`/check`), read your own staged diff
   (`git diff --cached`) top to bottom.

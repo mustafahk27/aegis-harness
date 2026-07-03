@@ -47,7 +47,7 @@ interface MockCtx {
   };
 }
 
-function makeCtx(cwd = "/tmp/senpai-commit-gate"): MockCtx {
+function makeCtx(cwd = "/tmp/aegis-harness-commit-gate"): MockCtx {
   return {
     hasUI: false,
     cwd,
@@ -171,7 +171,7 @@ describe("done-gate / commit-gate interaction (FIX 1)", () => {
 
     expect(api._sentMessages.length).toBeGreaterThan(0);
     const msg = api._sentMessages[0] as { customType: string };
-    expect(msg.customType).toBe("senpai-done-gate");
+    expect(msg.customType).toBe("aegis-harness-done-gate");
   });
 
   it("project with passing 'test' check: git commit clears done gate (no bounce)", async () => {
@@ -229,6 +229,6 @@ describe("done-gate / commit-gate interaction (FIX 1)", () => {
     // Skipped test check must NOT satisfy the done gate
     expect(api._sentMessages.length).toBeGreaterThan(0);
     const msg = api._sentMessages[0] as { customType: string };
-    expect(msg.customType).toBe("senpai-done-gate");
+    expect(msg.customType).toBe("aegis-harness-done-gate");
   });
 });

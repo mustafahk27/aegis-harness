@@ -3,7 +3,7 @@ export function checkDangerous(command: string): string | null {
   // Finding 1: sudo check is case-insensitive
   // Use /i flag so SUDO, Sudo, etc. are all caught
   if (/(^|\s|;|&&|\|\|)sudo\s/i.test(` ${command} `)) {
-    return "sudo is blocked by senpai. Run privileged commands manually.";
+    return "sudo is blocked by Aegis Harness. Run privileged commands manually.";
   }
 
   // Findings 2 & 3: rm recursive on dangerous targets

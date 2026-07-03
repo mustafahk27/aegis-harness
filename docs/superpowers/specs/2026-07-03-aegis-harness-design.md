@@ -1,4 +1,4 @@
-# senpai — Design Spec
+# Aegis Harness — Design Spec
 
 Date: 2026-07-03
 Status: Approved design, pending implementation plan
@@ -24,7 +24,7 @@ without forking pi and without changing how pi is billed or authenticated.
 ## Architecture overview
 
 ```
-senpai/                      (this repo, versioned)
+aegis-harness/               (this repo, versioned)
 ├── install.sh                   symlinks the dirs below into ~/.pi/agent/
 ├── extensions/
 │   ├── persona.ts               system-prompt injection (before_agent_start)

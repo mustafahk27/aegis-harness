@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { commandExists, formatFailures, runChecks } from "../extension/lib/checks.js";
 
-const cwd = () => mkdtempSync(join(tmpdir(), "senpai-checks-"));
+const cwd = () => mkdtempSync(join(tmpdir(), "aegis-harness-checks-"));
 
 describe("commandExists", () => {
   it("finds sh, not a nonsense binary", () => {

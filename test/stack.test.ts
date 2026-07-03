@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import { detectStack } from "../extension/lib/stack.js";
 
 function tmp(): string {
-  return mkdtempSync(join(tmpdir(), "senpai-stack-"));
+  return mkdtempSync(join(tmpdir(), "aegis-harness-stack-"));
 }
 
 describe("detectStack", () => {
