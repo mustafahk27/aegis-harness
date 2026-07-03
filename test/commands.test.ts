@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { checkDangerous, isGitCommit, isTestRun } from "../extension/lib/commands.js";
+import { parseCommandLine } from "../extension/lib/command-parser.js";
 
 describe("checkDangerous", () => {
   it("blocks rm -rf on absolute and home paths", () => {
@@ -56,6 +57,23 @@ describe("isTestRun", () => {
   it("ignores non-test commands", () => {
     expect(isTestRun("npm run build")).toBe(false);
     expect(isTestRun("ls -la")).toBe(false);
+  });
+});
+
+describe("parseCommandLine", () => {
+  it("splits chained commands into separate segments", () => {
+    const segments = parseCommandLine("npm run build && git commit -m 'x'");
+    expect(segments).toHaveLength(2);
+    expect(segments[0].argv).toEqual(["npm", "run", "build"]);
+    expect(segments[1].argv).toEqual(["git", "commit", "-m", "x"]);
+  });
+
+  it("preserves quoted pipe characters inside arguments", () => {
+    const segments = parseCommandLine("echo 'a | b' | sh");
+    expect(segments).toHaveLength(2);
+    expect(segments[0].argv).toEqual(["echo", "a | b"]);
+    expect(segments[1].argv).toEqual(["sh"]);
+    expect(segments[1].separatorBefore).toBe("pipe");
   });
 });
 
