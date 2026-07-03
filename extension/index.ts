@@ -7,15 +7,17 @@ import { formatFailures, runChecks, commandExists } from "./lib/checks.js";
 import { DoneGate, isCodeFile } from "./lib/done-gate.js";
 import { scanForSecrets, scanStagedDiff, type SecretFinding } from "./lib/secrets.js";
 import { detectStack } from "./lib/stack.js";
+import { loadPolicy } from "./lib/policy.js";
 
-function formatSecrets(findings: SecretFinding[]): string {
+function formatSecrets(findings: SecretFinding[], displayName: string): string {
   const lines = findings.map((f) => `  line ${f.line} [${f.rule}]: ${f.snippet}`).join("\n");
-  return `Blocked by Aegis Harness secret gate:\n${lines}\nRemove the secret (use environment variables) and retry.`;
+  return `Blocked by ${displayName} secret gate:\n${lines}\nSuggested fix: replace the secret with an environment variable or secret manager reference, then retry.`;
 }
 
 export default function (pi: ExtensionAPI) {
   const doneGate = new DoneGate();
   let gatesEnabled = true;
+  let policy = loadPolicy(process.cwd()).policy;
 
   // --- persona ---------------------------------------------------------
   pi.on("before_agent_start", async (event) => {
@@ -24,15 +26,23 @@ export default function (pi: ExtensionAPI) {
 
   // --- session start: reset state, warn about missing optional tools ---
   pi.on("session_start", async (_event, ctx) => {
-    gatesEnabled = true;
-    const missing = ["gitleaks", "semgrep"].filter((b) => !commandExists(b));
+    const loaded = loadPolicy(ctx.cwd);
+    policy = loaded.policy;
+    gatesEnabled = policy.gatesEnabledByDefault;
+    const missing = [
+      ...(policy.checks.includeGitleaks ? ["gitleaks"] : []),
+      ...(policy.checks.includeSemgrep ? ["semgrep"] : []),
+    ].filter((b) => !commandExists(b));
     if (missing.length && ctx.hasUI) {
       ctx.ui.notify(
-        `aegis-harness: ${missing.join(", ")} not installed — falling back to built-in scanning only`,
+        `${policy.uiKey}: ${missing.join(", ")} not installed — falling back to built-in scanning only`,
         "warning",
       );
     }
-    if (ctx.hasUI) ctx.ui.setStatus("aegis-harness", "gates: on");
+    for (const warning of loaded.warnings) {
+      if (ctx.hasUI) ctx.ui.notify(`${policy.displayName} policy warning: ${warning}`, "warning");
+    }
+    if (ctx.hasUI) ctx.ui.setStatus(policy.uiKey, `gates: ${gatesEnabled ? "on" : "OFF"}`);
   });
 
   // --- re-arm the done gate on real user input -------------------------
@@ -46,26 +56,26 @@ export default function (pi: ExtensionAPI) {
     if (isToolCallEventType("bash", event)) {
       const command = event.input.command;
       // Dangerous-command gate: NEVER disabled, even by /gates off.
-      const reason = checkDangerous(command);
+      const reason = checkDangerous(command, policy);
       if (reason) return { block: true, reason };
 
       if (gatesEnabled && isGitCommit(command)) {
         // Secret gate on staged content (fail closed: errors block).
         let findings: SecretFinding[];
         try {
-          findings = scanStagedDiff(ctx.cwd);
+          findings = scanStagedDiff(ctx.cwd, policy);
         } catch (err) {
-          return { block: true, reason: `Aegis Harness secret scan failed (fail-closed): ${String(err)}` };
+          return { block: true, reason: `${policy.displayName} secret scan failed (fail-closed): ${String(err)}` };
         }
-        if (findings.length) return { block: true, reason: formatSecrets(findings) };
+        if (findings.length) return { block: true, reason: formatSecrets(findings, policy.displayName) };
 
         // Commit gate: full check suite must pass.
-        if (ctx.hasUI) ctx.ui.setStatus("aegis-harness", "running pre-commit checks…");
-        const results = runChecks(ctx.cwd, detectStack(ctx.cwd).checks);
-        if (ctx.hasUI) ctx.ui.setStatus("aegis-harness", "gates: on");
+        if (ctx.hasUI) ctx.ui.setStatus(policy.uiKey, "running pre-commit checks…");
+        const results = runChecks(ctx.cwd, detectStack(ctx.cwd, policy).checks, policy.checks.timeoutMs);
+        if (ctx.hasUI) ctx.ui.setStatus(policy.uiKey, "gates: on");
         const failed = results.filter((r) => !r.ok);
         if (failed.length) {
-          return { block: true, reason: `Commit blocked by Aegis Harness.\n${formatFailures(results)}` };
+          return { block: true, reason: `Commit blocked by ${policy.displayName}.\n${formatFailures(results)}` };
         }
         // Only mark the done gate satisfied if a real test check actually ran and passed.
         // A project with no test script has no "test" check in its suite — a successful
@@ -78,16 +88,16 @@ export default function (pi: ExtensionAPI) {
     }
 
     if (gatesEnabled && isToolCallEventType("write", event)) {
-      const findings = scanForSecrets(event.input.content);
-      if (findings.length) return { block: true, reason: formatSecrets(findings) };
+      const findings = scanForSecrets(event.input.content, policy);
+      if (findings.length) return { block: true, reason: formatSecrets(findings, policy.displayName) };
       return;
     }
 
     if (gatesEnabled && isToolCallEventType("edit", event)) {
       // edit input: { path: string; edits: { oldText: string; newText: string }[] }
       const combined = event.input.edits.map((e) => e.newText).join("\n");
-      const findings = scanForSecrets(combined);
-      if (findings.length) return { block: true, reason: formatSecrets(findings) };
+      const findings = scanForSecrets(combined, policy);
+      if (findings.length) return { block: true, reason: formatSecrets(findings, policy.displayName) };
     }
   });
 
@@ -99,7 +109,7 @@ export default function (pi: ExtensionAPI) {
     }
     if (event.toolName === "bash") {
       const command = (event.input as { command?: string }).command ?? "";
-      if (isTestRun(command)) doneGate.noteTestRun(!event.isError);
+      if (isTestRun(command, policy)) doneGate.noteTestRun(!event.isError);
     }
   });
 
@@ -123,7 +133,9 @@ export default function (pi: ExtensionAPI) {
   pi.registerCommand("check", {
     description: "Aegis Harness: run the full check suite for this project",
     handler: async (_args, ctx) => {
-      const results = runChecks(ctx.cwd, detectStack(ctx.cwd).checks);
+      const loaded = loadPolicy(ctx.cwd);
+      policy = loaded.policy;
+      const results = runChecks(ctx.cwd, detectStack(ctx.cwd, policy).checks, policy.checks.timeoutMs);
       const summary = results
         .map((r) => `${r.ok ? (r.skipped ? "SKIP" : "PASS") : "FAIL"} ${r.name}${r.skipped ? ` (${r.output})` : ""}`)
         .join("\n");
@@ -149,9 +161,9 @@ export default function (pi: ExtensionAPI) {
       const arg = (args ?? "").trim();
       if (arg === "on") gatesEnabled = true;
       else if (arg === "off") gatesEnabled = false;
-      ctx.ui.setStatus("aegis-harness", `gates: ${gatesEnabled ? "on" : "OFF"}`);
+      ctx.ui.setStatus(policy.uiKey, `gates: ${gatesEnabled ? "on" : "OFF"}`);
       ctx.ui.notify(
-        `Aegis Harness gates ${gatesEnabled ? "ON" : "OFF — commit/secret/done gates disabled until /gates on or session restart"}`,
+        `${policy.displayName} gates ${gatesEnabled ? "ON" : "OFF — commit/secret/done gates disabled until /gates on or session restart"}`,
         gatesEnabled ? "info" : "warning",
       );
     },
