@@ -67,7 +67,12 @@ export default function (pi: ExtensionAPI) {
         if (failed.length) {
           return { block: true, reason: `Commit blocked by senpai.\n${formatFailures(results)}` };
         }
-        doneGate.noteTestRun(true); // suite (incl. tests when defined) passed
+        // Only mark the done gate satisfied if a real test check actually ran and passed.
+        // A project with no test script has no "test" check in its suite — a successful
+        // commit in that project must NOT clear the done gate.  A skipped optional test
+        // check (binary not installed) does not count either.
+        const testCheckPassed = results.some((r) => r.name === "test" && r.ok && !r.skipped);
+        if (testCheckPassed) doneGate.noteTestRun(true);
       }
       return;
     }
