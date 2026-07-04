@@ -135,7 +135,8 @@ describe("extension smoke tests", () => {
 
     expect(result).toBeDefined();
     expect(result?.block).toBe(true);
-    expect(result?.reason).toMatch(/sudo.*aegis harness/i);
+    expect(result?.reason).toMatch(/blocked the command/i);
+    expect(result?.reason).toMatch(/Command: sudo ls/i);
   });
 
   it("dangerous-command gate is always on even when gatesEnabled=false (gates off)", async () => {
@@ -270,14 +271,21 @@ describe("extension smoke tests", () => {
       toolName: "bash",
       input: { command: "sudo ls" },
     });
+    await api._trigger("tool_call", {
+      type: "tool_call",
+      toolCallId: "tc-why-2",
+      toolName: "write",
+      input: { path: "creds.ts", content: 'const key = "AKIAIOSFODNN7EXAMPLE"' },
+    });
 
     await api._commands.get("why")!.handler("", whyCtx as never);
     await api._commands.get("explain")!.handler("", explainCtx as never);
 
     expect(whyCtx.notifications[0].msg).toMatch(/Last block/i);
-    expect(whyCtx.notifications[0].msg).toMatch(/dangerous-command/i);
+    expect(whyCtx.notifications[0].msg).toMatch(/secret gate/i);
     expect(explainCtx.notifications[0].msg).toMatch(/Why:/i);
     expect(explainCtx.notifications[0].msg).toMatch(/Fix:/i);
+    expect(explainCtx.notifications[0].msg).toMatch(/AKIAIOSFODNN7EXAMPLE/i);
   });
 
   it("/why says when no block has happened yet", async () => {
