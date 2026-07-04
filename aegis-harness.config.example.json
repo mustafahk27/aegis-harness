@@ -1,0 +1,43 @@
+{
+  "displayName": "Aegis Harness",
+  "uiKey": "aegis-harness",
+  "gatesEnabledByDefault": true,
+  "dangerousCommands": {
+    "blockSudo": true,
+    "blockRecursiveRmOutsideProject": true,
+    "blockPipeToShell": true,
+    "blockedBranches": ["main", "master"],
+    "blockChmod777": true
+  },
+  "secrets": {
+    "rules": [
+      { "rule": "aws-access-key", "pattern": "\\bA(?:KIA|SIA)[0-9A-Z]{16}\\b" },
+      { "rule": "private-key", "pattern": "-----BEGIN (?:RSA |EC |OPENSSH |DSA |PGP )?PRIVATE KEY" },
+      { "rule": "github-token", "pattern": "\\bgh[pousr]_[A-Za-z0-9]{36,}\\b" },
+      { "rule": "slack-token", "pattern": "\\bxox[baprs]-[A-Za-z0-9-]{10,}\\b" },
+      { "rule": "openai-key", "pattern": "\\bsk-[A-Za-z0-9_-]{32,}\\b" }
+    ],
+    "placeholderPatterns": [
+      "process\\.env",
+      "os\\.environ",
+      "getenv",
+      "<[^>]+>",
+      "\\bexample\\b",
+      "\\bchangeme\\b",
+      "\\bplaceholder\\b",
+      "x{4,}",
+      "\\.\\.\\."
+    ]
+  },
+  "checks": {
+    "timeoutMs": 300000,
+    "includeGitleaks": true,
+    "includeSemgrep": true,
+    "extraChecks": []
+  },
+  "tests": {
+    "packageManagers": ["npm", "pnpm", "yarn", "bun"],
+    "directRunners": ["vitest", "jest"],
+    "pythonModuleRunners": ["pytest"]
+  }
+}

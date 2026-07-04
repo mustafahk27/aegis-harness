@@ -45,13 +45,26 @@ Interactive verification steps (to check all gates are working end-to-end):
 ## Policy file
 
 Drop an `aegis-harness.config.json` file in a target repo to tune the harness
-without editing code. The defaults in this repo show the supported shape:
-- project display name and UI key
-- dangerous-command policy
-- secret rules and placeholder patterns
-- check timeout and extra checks
-- test-run detection words
-- Commands: `/check`, `/secreview`, `/gates on|off|status`
+without editing code. A good workflow is:
+
+1. Copy `aegis-harness.config.example.json` into the target repo.
+2. Rename it to `aegis-harness.config.json`.
+3. Adjust only the knobs your team wants to change.
+
+Supported config shape:
+- `displayName` / `uiKey`: rename the harness in UI messages and status text.
+- `dangerousCommands`: enable/disable individual command gates and protected branches.
+- `secrets.rules` / `secrets.placeholderPatterns`: add or relax secret detectors.
+- `checks.timeoutMs` / `checks.extraChecks`: tune check runtime and add repo-specific checks.
+- `tests.*`: change how the harness recognizes test commands for the repo.
+
+The bundled example file is intentionally close to the defaults, so teams can
+start from a known-safe baseline and only override what they need.
+
+Commands:
+- `/check` runs the full check suite.
+- `/secreview` reviews the current uncommitted diff.
+- `/gates on|off|status` toggles commit/secret/done gates for the session.
 
 ## Development
 
