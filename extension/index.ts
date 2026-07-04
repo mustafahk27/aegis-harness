@@ -13,47 +13,69 @@ type BlockKind = "dangerous-command" | "secret" | "commit" | "done-gate";
 
 interface BlockRecord {
   kind: BlockKind;
+  summary: string;
+  why: string;
+  fix: string;
+  details: string[];
   reason: string;
-  detail: string;
 }
 
-function formatSecrets(findings: SecretFinding[], displayName: string): string {
-  const lines = findings.map((f) => `  line ${f.line} [${f.rule}]: ${f.snippet}`).join("\n");
-  return `Blocked by ${displayName} secret gate:
-Why: the staged or edited content matches a known secret pattern.
-${lines}
-Fix: replace the secret with an environment variable or secret manager reference, then retry.`;
+function makeBlockRecord(input: {
+  kind: BlockKind;
+  summary: string;
+  why: string;
+  fix: string;
+  details?: string[];
+}): BlockRecord {
+  const details = input.details ?? [];
+  const reason = [input.summary, `Why: ${input.why}`, ...details, `Fix: ${input.fix}`].join("\n");
+  return {
+    kind: input.kind,
+    summary: input.summary,
+    why: input.why,
+    fix: input.fix,
+    details,
+    reason,
+  };
 }
 
-function summarizeReason(reason: string): string {
-  return reason.split("\n").slice(0, 2).join(" ");
+function formatSecrets(findings: SecretFinding[], displayName: string): BlockRecord {
+  const details = findings.map((f) => `  line ${f.line} [${f.rule}]: ${f.snippet}`);
+  return makeBlockRecord({
+    kind: "secret",
+    summary: `Blocked by ${displayName} secret gate.`,
+    why: "the staged or edited content matches a known secret pattern.",
+    fix: "replace the secret with an environment variable or secret manager reference, then retry.",
+    details,
+  });
 }
 
 export default function (pi: ExtensionAPI) {
   const doneGate = new DoneGate();
   let gatesEnabled = true;
   let policy = loadPolicy(process.cwd()).policy;
-  let lastBlock: BlockRecord | null = null;
+  let blockHistory: BlockRecord[] = [];
 
-  function rememberBlock(kind: BlockKind, reason: string) {
-    lastBlock = { kind, reason, detail: summarizeReason(reason) };
+  function rememberBlock(block: BlockRecord) {
+    blockHistory = [block, ...blockHistory.filter((entry) => entry.reason !== block.reason)].slice(0, 5);
   }
 
   function clearBlock(): void {
-    lastBlock = null;
+    blockHistory = [];
   }
 
   function explainBlock(mode: "why" | "explain"): string {
-    if (!lastBlock) {
+    const current = blockHistory[0];
+    if (!current) {
       return "No recent block found in this session. Trigger a blocked command first, then ask /why or /explain.";
     }
 
     if (mode === "why") {
-      return `Last block (${lastBlock.kind}): ${lastBlock.detail}`;
+      return `Last block (${current.kind}): ${current.summary}`;
     }
 
-    return `Last block (${lastBlock.kind}):
-${lastBlock.reason}
+    return `Last block (${current.kind}):
+${current.reason}
 Use this to adjust the command, file change, or commit, then try again.`;
   }
 
@@ -97,8 +119,15 @@ Use this to adjust the command, file change, or commit, then try again.`;
       // Dangerous-command gate: NEVER disabled, even by /gates off.
       const reason = checkDangerous(command, policy);
       if (reason) {
-        rememberBlock("dangerous-command", reason);
-        return { block: true, reason };
+        const block = makeBlockRecord({
+          kind: "dangerous-command",
+          summary: `${policy.displayName} blocked the command.`,
+          why: "it matches a dangerous-command rule that protects the project and your machine.",
+          fix: "rewrite the command to avoid the risky operation, or run the safest possible narrower version manually.",
+          details: [`Command: ${command}`],
+        });
+        rememberBlock(block);
+        return { block: true, reason: block.reason };
       }
 
       if (gatesEnabled && isGitCommit(command)) {
@@ -107,14 +136,20 @@ Use this to adjust the command, file change, or commit, then try again.`;
         try {
           findings = scanStagedDiff(ctx.cwd, policy);
         } catch (err) {
-          const reason = `${policy.displayName} secret scan failed (fail-closed): ${String(err)}`;
-          rememberBlock("secret", reason);
-          return { block: true, reason };
+          const block = makeBlockRecord({
+            kind: "secret",
+            summary: `${policy.displayName} secret scan failed (fail-closed).`,
+            why: "the staged-diff scanner returned an error, so the harness refused to continue.",
+            fix: "fix the scanner error or rerun in a context where the repo can be scanned safely.",
+            details: [`Error: ${String(err)}`],
+          });
+          rememberBlock(block);
+          return { block: true, reason: block.reason };
         }
         if (findings.length) {
-          const reason = formatSecrets(findings, policy.displayName);
-          rememberBlock("secret", reason);
-          return { block: true, reason };
+          const block = formatSecrets(findings, policy.displayName);
+          rememberBlock(block);
+          return { block: true, reason: block.reason };
         }
 
         // Commit gate: full check suite must pass.
@@ -123,13 +158,17 @@ Use this to adjust the command, file change, or commit, then try again.`;
         if (ctx.hasUI) ctx.ui.setStatus(policy.uiKey, "gates: on");
         const failed = results.filter((r) => !r.ok);
         if (failed.length) {
-          const reason = `Commit blocked by ${policy.displayName}.
-Why: one or more required checks failed before the commit could proceed.
-${formatFailures(results)}`;
-          rememberBlock("commit", reason);
+          const block = makeBlockRecord({
+            kind: "commit",
+            summary: `Commit blocked by ${policy.displayName}.`,
+            why: "one or more required checks failed before the commit could proceed.",
+            fix: "resolve the failing checks and rerun the commit.",
+            details: formatFailures(results).split("\n\n"),
+          });
+          rememberBlock(block);
           return {
             block: true,
-            reason,
+            reason: block.reason,
           };
         }
         // Only mark the done gate satisfied if a real test check actually ran and passed.
@@ -145,9 +184,9 @@ ${formatFailures(results)}`;
     if (gatesEnabled && isToolCallEventType("write", event)) {
       const findings = scanForSecrets(event.input.content, policy);
       if (findings.length) {
-        const reason = formatSecrets(findings, policy.displayName);
-        rememberBlock("secret", reason);
-        return { block: true, reason };
+        const block = formatSecrets(findings, policy.displayName);
+        rememberBlock(block);
+        return { block: true, reason: block.reason };
       }
       return;
     }
@@ -157,9 +196,9 @@ ${formatFailures(results)}`;
       const combined = event.input.edits.map((e) => e.newText).join("\n");
       const findings = scanForSecrets(combined, policy);
       if (findings.length) {
-        const reason = formatSecrets(findings, policy.displayName);
-        rememberBlock("secret", reason);
-        return { block: true, reason };
+        const block = formatSecrets(findings, policy.displayName);
+        rememberBlock(block);
+        return { block: true, reason: block.reason };
       }
     }
   });
@@ -179,14 +218,17 @@ ${formatFailures(results)}`;
   // --- done gate: bounce untested completion ----------------------------
   pi.on("agent_end", async () => {
     if (gatesEnabled && doneGate.shouldBounce()) {
-      const reason = `Aegis Harness done gate:
-Why: you modified code this session but there was no passing test run afterwards.
-Fix: run the project's test suite now. If tests fail, fix them. If no test covers your change, add one first.`;
-      rememberBlock("done-gate", reason);
+      const block = makeBlockRecord({
+        kind: "done-gate",
+        summary: "Aegis Harness done gate bounced the session.",
+        why: "you modified code this session but there was no passing test run afterwards.",
+        fix: "run the project's test suite now. If tests fail, fix them. If no test covers your change, add one first.",
+      });
+      rememberBlock(block);
       pi.sendMessage(
         {
           customType: "aegis-harness-done-gate",
-          content: reason,
+          content: block.reason,
           display: true,
         },
         { deliverAs: "followUp", triggerTurn: true },
