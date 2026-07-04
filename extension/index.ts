@@ -11,7 +11,10 @@ import { loadPolicy } from "./lib/policy.js";
 
 function formatSecrets(findings: SecretFinding[], displayName: string): string {
   const lines = findings.map((f) => `  line ${f.line} [${f.rule}]: ${f.snippet}`).join("\n");
-  return `Blocked by ${displayName} secret gate:\n${lines}\nSuggested fix: replace the secret with an environment variable or secret manager reference, then retry.`;
+  return `Blocked by ${displayName} secret gate:
+Why: the staged or edited content matches a known secret pattern.
+${lines}
+Fix: replace the secret with an environment variable or secret manager reference, then retry.`;
 }
 
 export default function (pi: ExtensionAPI) {
@@ -75,7 +78,12 @@ export default function (pi: ExtensionAPI) {
         if (ctx.hasUI) ctx.ui.setStatus(policy.uiKey, "gates: on");
         const failed = results.filter((r) => !r.ok);
         if (failed.length) {
-          return { block: true, reason: `Commit blocked by ${policy.displayName}.\n${formatFailures(results)}` };
+          return {
+            block: true,
+            reason: `Commit blocked by ${policy.displayName}.
+Why: one or more required checks failed before the commit could proceed.
+${formatFailures(results)}`,
+          };
         }
         // Only mark the done gate satisfied if a real test check actually ran and passed.
         // A project with no test script has no "test" check in its suite — a successful
@@ -119,9 +127,9 @@ export default function (pi: ExtensionAPI) {
       pi.sendMessage(
         {
           customType: "aegis-harness-done-gate",
-          content:
-            "Aegis Harness done gate: you modified code this session but there was no passing test run afterwards. " +
-            "Run the project's test suite now. If tests fail, fix them. If no test covers your change, add one first.",
+          content: `Aegis Harness done gate:
+Why: you modified code this session but there was no passing test run afterwards.
+Fix: run the project's test suite now. If tests fail, fix them. If no test covers your change, add one first.`,
           display: true,
         },
         { deliverAs: "followUp", triggerTurn: true },
