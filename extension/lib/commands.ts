@@ -47,7 +47,9 @@ function recursiveRmReason(argv: string[]): string | null {
   if (!recursive) return null;
   for (const target of targets) {
     if (isProtectedPath(target)) {
-      return `Recursive rm on '${target}' is blocked. Suggested fix: use a relative path inside the project, for example \`rm -rf ./dist\`.`;
+      return `Blocked: recursive rm on '${target}' can delete files outside the project.
+Why: recursive deletes on absolute, home, or parent paths are easy to mis-target and hard to recover from.
+Fix: use a relative path inside the project, for example \`rm -rf ./dist\`.`;
     }
   }
   return null;
@@ -61,11 +63,15 @@ export function checkDangerous(command: string, policy: AegisPolicy = defaultPol
     const firstLower = commandWord(first);
 
     if (policy.dangerousCommands.blockSudo && firstLower === "sudo") {
-      return `sudo is blocked by ${policy.displayName}. Suggested fix: run privileged commands manually when needed.`;
+      return `Blocked: sudo is blocked by ${policy.displayName} because it can change system-wide state outside the project.
+Why: elevated commands bypass the harness’s project boundary.
+Fix: run the privileged command manually, or scope it to the smallest safe path/user you can.`;
     }
 
     if (policy.dangerousCommands.blockPipeToShell && segment.separatorBefore === "pipe" && SHELLS.has(firstLower)) {
-      return `Pipe-to-shell is blocked: piping a download into ${firstLower} is unsafe. Suggested fix: download it to a file, inspect it, then run it manually.`;
+      return `Blocked: pipe-to-shell into ${firstLower} can execute unreviewed code.
+Why: the file is downloaded and executed in one step with no inspection point.
+Fix: download it to a file, inspect it, then run it explicitly.`;
     }
 
     if (policy.dangerousCommands.blockRecursiveRmOutsideProject) {
@@ -78,13 +84,17 @@ export function checkDangerous(command: string, policy: AegisPolicy = defaultPol
       if (subcommand === "push" && policy.dangerousCommands.blockedBranches.length > 0) {
         const hasForce = args.includes("--force") || args.includes("-f");
         if (hasForce && includesProtectedBranch(args, policy.dangerousCommands.blockedBranches)) {
-          return `Force-pushing to ${policy.dangerousCommands.blockedBranches.join("/")} is blocked. Suggested fix: use \`--force-with-lease\` on a feature branch.`;
+          return `Blocked: force-pushing to ${policy.dangerousCommands.blockedBranches.join("/")} rewrites shared history.
+Why: protected branches are shared references and force-pushes can drop other people's work.
+Fix: push to a feature branch, or use \`--force-with-lease\` only when you control the branch.`;
         }
       }
     }
 
     if (policy.dangerousCommands.blockChmod777 && firstLower === "chmod" && segment.argv.some((token) => token === "777")) {
-      return "chmod 777 is blocked. Suggested fix: use the least-privilege mode your task needs, such as 750 or 640.";
+      return `Blocked: chmod 777 makes files world-writable.
+Why: it grants far more access than most tasks need.
+Fix: use the least-privilege mode your task needs, such as 750 or 640.`;
     }
   }
   return null;

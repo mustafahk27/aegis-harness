@@ -52,15 +52,17 @@ export function formatFailures(results: CheckResult[]): string {
   const failed = results.filter((r) => !r.ok);
   return failed
     .map((r) => {
-      const hint =
+      const explanation =
         r.output.includes("not installed")
-          ? "Suggested fix: install the missing binary or mark the check optional if it is intentionally unavailable."
+          ? "Why: the required check tool is missing from this machine.\nFix: install the missing binary or mark the check optional if it is intentionally unavailable."
+          : r.output.includes("timed out")
+            ? "Why: the check exceeded the configured timeout.\nFix: narrow the check scope, speed up the check, or raise the timeout in policy if the slower run is expected."
           : r.name === "lint"
-            ? "Suggested fix: run the lint command locally and address the reported violations."
+            ? "Why: lint found code-quality or style violations.\nFix: run the lint command locally and address the reported violations."
             : r.name === "test"
-              ? "Suggested fix: fix the failing tests or add coverage for the change before retrying."
-              : "Suggested fix: inspect the output above and rerun the check after addressing the failure.";
-      return `Check '${r.name}' failed:\n${r.output || "(no output)"}\n${hint}`;
+              ? "Why: the test suite did not pass.\nFix: repair the failing tests or add coverage for the change before retrying."
+              : "Why: the check exited non-zero.\nFix: inspect the output above and rerun the check after addressing the failure.";
+      return `Check '${r.name}' failed:\n${r.output || "(no output)"}\n${explanation}`;
     })
     .join("\n\n");
 }

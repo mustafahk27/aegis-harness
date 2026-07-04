@@ -45,13 +45,21 @@ describe("runChecks", () => {
 });
 
 describe("formatFailures", () => {
-  it("lists only failing checks with output", () => {
+  it("lists only failing checks with output and fix guidance", () => {
     const msg = formatFailures([
       { name: "lint", ok: true, skipped: false, output: "" },
       { name: "test", ok: false, skipped: false, output: "2 failed" },
     ]);
     expect(msg).toContain("test");
     expect(msg).toContain("2 failed");
+    expect(msg).toMatch(/Why:/);
+    expect(msg).toMatch(/Fix:/);
     expect(msg).not.toContain("lint");
+  });
+
+  it("explains missing tools clearly", () => {
+    const msg = formatFailures([{ name: "lint", ok: false, skipped: false, output: "semgrep not installed but required" }]);
+    expect(msg).toMatch(/missing/i);
+    expect(msg).toMatch(/install the missing binary/i);
   });
 });
