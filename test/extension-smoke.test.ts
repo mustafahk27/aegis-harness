@@ -14,6 +14,8 @@ type Handler = (event: unknown, ctx: unknown) => Promise<unknown>;
 interface MockCtx {
   hasUI: boolean;
   cwd: string;
+  notifications: Array<{ msg: string; type?: string }>;
+  statuses: Array<{ key: string; text: string }>;
   ui: {
     notify: (msg: string, type?: string) => void;
     setStatus: (key: string, text: string) => void;
@@ -21,12 +23,20 @@ interface MockCtx {
 }
 
 function makeCtx(cwd = "/tmp/aegis-harness-smoke", hasUI = false): MockCtx {
+  const notifications: Array<{ msg: string; type?: string }> = [];
+  const statuses: Array<{ key: string; text: string }> = [];
   return {
     hasUI,
     cwd,
+    notifications,
+    statuses,
     ui: {
-      notify: () => {},
-      setStatus: () => {},
+      notify: (msg: string, type?: string) => {
+        notifications.push({ msg, type });
+      },
+      setStatus: (key: string, text: string) => {
+        statuses.push({ key, text });
+      },
     },
   };
 }
@@ -205,6 +215,44 @@ describe("extension smoke tests", () => {
 
   it("registers /gates command (smoke check 4)", () => {
     expect(api._commands.has("gates")).toBe(true);
+  });
+
+  it("runs /check and reports the check summary", async () => {
+    const ctx = makeCtx();
+    const checkCmd = api._commands.get("check")!;
+
+    await checkCmd.handler("", ctx);
+
+    expect(ctx.notifications.length).toBeGreaterThan(0);
+    expect(ctx.notifications[0].msg).toMatch(/gitleaks|semgrep|PASS|SKIP|FAIL/i);
+  });
+
+  it("runs /secreview and sends the security-review prompt", async () => {
+    const ctx = {
+      ...makeCtx(),
+      waitForIdle: async () => {},
+    };
+    const secreviewCmd = api._commands.get("secreview")!;
+
+    await secreviewCmd.handler("", ctx as never);
+
+    expect(api._sentUserMessages.length).toBeGreaterThan(0);
+    expect(api._sentUserMessages[0]).toMatch(/security-review/i);
+    expect(api._sentUserMessages[0]).toMatch(/git diff HEAD/i);
+  });
+
+  it("reports /gates status through the UI", async () => {
+    const ctx = {
+      ...makeCtx(),
+      waitForIdle: async () => {},
+    };
+    const gatesCmd = api._commands.get("gates")!;
+
+    await gatesCmd.handler("status", ctx as never);
+
+    expect(ctx.notifications.length).toBeGreaterThan(0);
+    expect(ctx.notifications[0].msg).toMatch(/gates/i);
+    expect(ctx.statuses[0].text).toMatch(/gates:/i);
   });
 
   it("/gates off and /gates on toggle gatesEnabled; sudo remains blocked", async () => {
