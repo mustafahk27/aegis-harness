@@ -9,6 +9,14 @@ import { scanForSecrets, scanStagedDiff, type SecretFinding } from "./lib/secret
 import { detectStack } from "./lib/stack.js";
 import { loadPolicy } from "./lib/policy.js";
 
+type BlockKind = "dangerous-command" | "secret" | "commit" | "done-gate";
+
+interface BlockRecord {
+  kind: BlockKind;
+  reason: string;
+  detail: string;
+}
+
 function formatSecrets(findings: SecretFinding[], displayName: string): string {
   const lines = findings.map((f) => `  line ${f.line} [${f.rule}]: ${f.snippet}`).join("\n");
   return `Blocked by ${displayName} secret gate:
@@ -17,10 +25,37 @@ ${lines}
 Fix: replace the secret with an environment variable or secret manager reference, then retry.`;
 }
 
+function summarizeReason(reason: string): string {
+  return reason.split("\n").slice(0, 2).join(" ");
+}
+
 export default function (pi: ExtensionAPI) {
   const doneGate = new DoneGate();
   let gatesEnabled = true;
   let policy = loadPolicy(process.cwd()).policy;
+  let lastBlock: BlockRecord | null = null;
+
+  function rememberBlock(kind: BlockKind, reason: string) {
+    lastBlock = { kind, reason, detail: summarizeReason(reason) };
+  }
+
+  function clearBlock(): void {
+    lastBlock = null;
+  }
+
+  function explainBlock(mode: "why" | "explain"): string {
+    if (!lastBlock) {
+      return "No recent block found in this session. Trigger a blocked command first, then ask /why or /explain.";
+    }
+
+    if (mode === "why") {
+      return `Last block (${lastBlock.kind}): ${lastBlock.detail}`;
+    }
+
+    return `Last block (${lastBlock.kind}):
+${lastBlock.reason}
+Use this to adjust the command, file change, or commit, then try again.`;
+  }
 
   // --- persona ---------------------------------------------------------
   pi.on("before_agent_start", async (event) => {
@@ -32,6 +67,7 @@ export default function (pi: ExtensionAPI) {
     const loaded = loadPolicy(ctx.cwd);
     policy = loaded.policy;
     gatesEnabled = policy.gatesEnabledByDefault;
+    clearBlock();
     const missing = [
       ...(policy.checks.includeGitleaks ? ["gitleaks"] : []),
       ...(policy.checks.includeSemgrep ? ["semgrep"] : []),
@@ -60,7 +96,10 @@ export default function (pi: ExtensionAPI) {
       const command = event.input.command;
       // Dangerous-command gate: NEVER disabled, even by /gates off.
       const reason = checkDangerous(command, policy);
-      if (reason) return { block: true, reason };
+      if (reason) {
+        rememberBlock("dangerous-command", reason);
+        return { block: true, reason };
+      }
 
       if (gatesEnabled && isGitCommit(command)) {
         // Secret gate on staged content (fail closed: errors block).
@@ -68,9 +107,15 @@ export default function (pi: ExtensionAPI) {
         try {
           findings = scanStagedDiff(ctx.cwd, policy);
         } catch (err) {
-          return { block: true, reason: `${policy.displayName} secret scan failed (fail-closed): ${String(err)}` };
+          const reason = `${policy.displayName} secret scan failed (fail-closed): ${String(err)}`;
+          rememberBlock("secret", reason);
+          return { block: true, reason };
         }
-        if (findings.length) return { block: true, reason: formatSecrets(findings, policy.displayName) };
+        if (findings.length) {
+          const reason = formatSecrets(findings, policy.displayName);
+          rememberBlock("secret", reason);
+          return { block: true, reason };
+        }
 
         // Commit gate: full check suite must pass.
         if (ctx.hasUI) ctx.ui.setStatus(policy.uiKey, "running pre-commit checks…");
@@ -78,11 +123,13 @@ export default function (pi: ExtensionAPI) {
         if (ctx.hasUI) ctx.ui.setStatus(policy.uiKey, "gates: on");
         const failed = results.filter((r) => !r.ok);
         if (failed.length) {
+          const reason = `Commit blocked by ${policy.displayName}.
+Why: one or more required checks failed before the commit could proceed.
+${formatFailures(results)}`;
+          rememberBlock("commit", reason);
           return {
             block: true,
-            reason: `Commit blocked by ${policy.displayName}.
-Why: one or more required checks failed before the commit could proceed.
-${formatFailures(results)}`,
+            reason,
           };
         }
         // Only mark the done gate satisfied if a real test check actually ran and passed.
@@ -97,7 +144,11 @@ ${formatFailures(results)}`,
 
     if (gatesEnabled && isToolCallEventType("write", event)) {
       const findings = scanForSecrets(event.input.content, policy);
-      if (findings.length) return { block: true, reason: formatSecrets(findings, policy.displayName) };
+      if (findings.length) {
+        const reason = formatSecrets(findings, policy.displayName);
+        rememberBlock("secret", reason);
+        return { block: true, reason };
+      }
       return;
     }
 
@@ -105,7 +156,11 @@ ${formatFailures(results)}`,
       // edit input: { path: string; edits: { oldText: string; newText: string }[] }
       const combined = event.input.edits.map((e) => e.newText).join("\n");
       const findings = scanForSecrets(combined, policy);
-      if (findings.length) return { block: true, reason: formatSecrets(findings, policy.displayName) };
+      if (findings.length) {
+        const reason = formatSecrets(findings, policy.displayName);
+        rememberBlock("secret", reason);
+        return { block: true, reason };
+      }
     }
   });
 
@@ -124,12 +179,14 @@ ${formatFailures(results)}`,
   // --- done gate: bounce untested completion ----------------------------
   pi.on("agent_end", async () => {
     if (gatesEnabled && doneGate.shouldBounce()) {
+      const reason = `Aegis Harness done gate:
+Why: you modified code this session but there was no passing test run afterwards.
+Fix: run the project's test suite now. If tests fail, fix them. If no test covers your change, add one first.`;
+      rememberBlock("done-gate", reason);
       pi.sendMessage(
         {
           customType: "aegis-harness-done-gate",
-          content: `Aegis Harness done gate:
-Why: you modified code this session but there was no passing test run afterwards.
-Fix: run the project's test suite now. If tests fail, fix them. If no test covers your change, add one first.`,
+          content: reason,
           display: true,
         },
         { deliverAs: "followUp", triggerTurn: true },
@@ -160,6 +217,20 @@ Fix: run the project's test suite now. If tests fail, fix them. If no test cover
       pi.sendUserMessage(
         "Load the 'security-review' skill (read its SKILL.md) and apply it to the current uncommitted changes (`git diff HEAD`). Report findings by severity.",
       );
+    },
+  });
+
+  pi.registerCommand("why", {
+    description: "Aegis Harness: explain the last blocked action briefly",
+    handler: async (_args, ctx) => {
+      ctx.ui.notify(explainBlock("why"), "info");
+    },
+  });
+
+  pi.registerCommand("explain", {
+    description: "Aegis Harness: explain the last blocked action in detail",
+    handler: async (_args, ctx) => {
+      ctx.ui.notify(explainBlock("explain"), "info");
     },
   });
 
