@@ -217,6 +217,11 @@ describe("extension smoke tests", () => {
     expect(api._commands.has("gates")).toBe(true);
   });
 
+  it("registers /why and /explain commands", () => {
+    expect(api._commands.has("why")).toBe(true);
+    expect(api._commands.has("explain")).toBe(true);
+  });
+
   it("runs /check and reports the check summary", async () => {
     const ctx = makeCtx();
     const checkCmd = api._commands.get("check")!;
@@ -253,6 +258,32 @@ describe("extension smoke tests", () => {
     expect(ctx.notifications.length).toBeGreaterThan(0);
     expect(ctx.notifications[0].msg).toMatch(/gates/i);
     expect(ctx.statuses[0].text).toMatch(/gates:/i);
+  });
+
+  it("/why and /explain report the last blocked action", async () => {
+    const whyCtx = makeCtx();
+    const explainCtx = makeCtx();
+
+    await api._trigger("tool_call", {
+      type: "tool_call",
+      toolCallId: "tc-why-1",
+      toolName: "bash",
+      input: { command: "sudo ls" },
+    });
+
+    await api._commands.get("why")!.handler("", whyCtx as never);
+    await api._commands.get("explain")!.handler("", explainCtx as never);
+
+    expect(whyCtx.notifications[0].msg).toMatch(/Last block/i);
+    expect(whyCtx.notifications[0].msg).toMatch(/dangerous-command/i);
+    expect(explainCtx.notifications[0].msg).toMatch(/Why:/i);
+    expect(explainCtx.notifications[0].msg).toMatch(/Fix:/i);
+  });
+
+  it("/why says when no block has happened yet", async () => {
+    const whyCtx = makeCtx();
+    await api._commands.get("why")!.handler("", whyCtx as never);
+    expect(whyCtx.notifications[0].msg).toMatch(/No recent block/i);
   });
 
   it("/gates off and /gates on toggle gatesEnabled; sudo remains blocked", async () => {
