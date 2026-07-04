@@ -5,14 +5,15 @@ description: Use when committing, branching, or preparing changes for review. Co
 
 # Git Hygiene
 
-- **Branches.** Anything non-trivial happens on a feature branch (`feat/…`, `fix/…`),
-  never directly on main.
-- **Commits.** One logical change per commit. The project must build and pass tests
-  at every commit. Message format: imperative summary line under 72 chars
-  (`feat: add rate limiter to login endpoint`), body only when the why isn't obvious.
-- **Never commit:** secrets or credentials (the Aegis Harness secret gate blocks these),
-  generated artifacts, dependencies, editor junk, commented-out code.
-- **Before committing:** run the checks (`/check`), read your own staged diff
-  (`git diff --cached`) top to bottom.
-- **Force pushes** to shared branches are forbidden (the harness blocks main/master);
-  use `--force-with-lease` on your own feature branches only.
+- **Use branches.** Anything non-trivial happens on a feature branch (`feat/…`, `fix/…`),
+  never directly on `main`.
+- **Keep commits small.** One logical change per commit, and every commit should
+  leave the project passing tests.
+- **Write clear messages.** Use an imperative summary line under 72 chars
+  (`feat: add rate limiter to login endpoint`); add a body only when the reason
+  is not obvious from the diff.
+- **Never commit:** secrets, generated artifacts, vendored dependencies, editor junk,
+  or commented-out code.
+- **Before committing:** run `/check` and read `git diff --cached` end to end.
+- **Force pushes** to shared branches are forbidden; use `--force-with-lease`
+  only on your own feature branches.

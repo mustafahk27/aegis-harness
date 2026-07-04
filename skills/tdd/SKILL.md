@@ -5,16 +5,15 @@ description: Use when implementing any feature or bugfix. Red-green-refactor dis
 
 # Test-Driven Development
 
-1. **Red.** Write a failing test that captures the desired behavior. Run it and
-   confirm it fails for the right reason (missing behavior, not a typo).
-2. **Green.** Write the minimal implementation that makes the test pass. Run it.
-3. **Refactor.** Clean up while keeping tests green.
+1. **Red.** Write a failing test that captures the desired behavior. Confirm the
+   failure is for missing behavior, not for a typo or broken setup.
+2. **Green.** Write the smallest implementation that makes the test pass.
+3. **Refactor.** Clean up while keeping the suite green.
 
 Rules:
 - Bug fixes start with a test that reproduces the bug.
 - Test behavior through public interfaces, not internals.
-- Cover the unhappy paths: invalid input, empty input, boundary values, errors.
-- A change is not done until the full suite passes. The Aegis Harness done gate will
-  bounce you if you finish without a passing test run — run tests before concluding.
+- Cover unhappy paths: invalid input, empty input, boundary values, and errors.
+- A change is not done until the full suite passes. Run tests before concluding.
 - If code is genuinely untestable (UI glue, wiring), say so explicitly instead of
   writing a vacuous test.

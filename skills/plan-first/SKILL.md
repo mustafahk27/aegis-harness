@@ -5,14 +5,16 @@ description: Use before implementing any non-trivial change (new feature, multi-
 
 # Plan First
 
-1. **Explore.** Read the files the change touches and their tests. Identify existing
-   patterns and utilities you should reuse. Do not propose code you haven't grounded
-   in the actual codebase.
-2. **Plan.** Present a short plan: goal, files to change, approach, test strategy,
-   and anything you'll deliberately NOT do. Keep it under ~15 lines.
-3. **Get approval.** Wait for the user to approve or adjust the plan before writing
-   any implementation code.
-4. **Execute in slices.** Implement in small increments, each leaving the project
-   in a working, tested state.
+Use this before any non-trivial change: new feature, multi-file edit, or design
+decision.
 
-Skip this workflow only for trivial fixes (typos, single obvious bug, config tweak).
+1. **Explore.** Read the touched files and tests. Reuse the repo’s existing
+   patterns instead of inventing new ones.
+2. **Plan.** Share a short plan: goal, files, approach, test strategy, and what
+   you will explicitly leave unchanged.
+3. **Get approval.** Wait for the user to accept or adjust the plan before you
+   write implementation code.
+4. **Execute in slices.** Make each slice shippable and testable before moving on.
+
+Skip this workflow only for trivial edits like typos, a single obvious bug, or a
+small config tweak.
