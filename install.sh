@@ -4,6 +4,12 @@ set -euo pipefail
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PI_DIR="${HOME}/.pi/agent"
 
+cd "${REPO_DIR}"
+
+if command -v npm >/dev/null 2>&1; then
+  npm run sync:policy
+fi
+
 mkdir -p "${PI_DIR}/extensions" "${PI_DIR}/skills"
 
 rm -rf "${PI_DIR}/extensions/aegis-harness" "${PI_DIR}/skills/aegis-harness"

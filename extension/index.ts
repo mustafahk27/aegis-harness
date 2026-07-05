@@ -57,7 +57,8 @@ function formatSecrets(findings: SecretFinding[], displayName: string): BlockRec
 export default function (pi: ExtensionAPI) {
   const doneGate = new DoneGate();
   let gatesEnabled = true;
-  let policy = loadPolicy(process.cwd()).policy;
+  let loadedPolicy = loadPolicy(process.cwd());
+  let policy = loadedPolicy.policy;
   let blockHistory: BlockRecord[] = [];
 
   function rememberBlock(block: BlockRecord) {
@@ -90,8 +91,8 @@ Use this to adjust the command, file change, or commit, then try again.`;
 
   // --- session start: reset state, warn about missing optional tools ---
   pi.on("session_start", async (_event, ctx) => {
-    const loaded = loadPolicy(ctx.cwd);
-    policy = loaded.policy;
+    loadedPolicy = loadPolicy(ctx.cwd);
+    policy = loadedPolicy.policy;
     gatesEnabled = policy.gatesEnabledByDefault;
     clearBlock();
     const missing = [
@@ -104,7 +105,7 @@ Use this to adjust the command, file change, or commit, then try again.`;
         "warning",
       );
     }
-    for (const warning of loaded.warnings) {
+    for (const warning of loadedPolicy.warnings) {
       if (ctx.hasUI) ctx.ui.notify(`${policy.displayName} policy warning: ${warning}`, "warning");
     }
     if (ctx.hasUI) ctx.ui.setStatus(policy.uiKey, `gates: ${gatesEnabled ? "on" : "OFF"} · ${policy.profile}`);
@@ -245,8 +246,8 @@ Use this to adjust the command, file change, or commit, then try again.`;
   pi.registerCommand("check", {
     description: "Aegis Harness: run the full check suite for this project",
     handler: async (_args, ctx) => {
-      const loaded = loadPolicy(ctx.cwd);
-      policy = loaded.policy;
+      loadedPolicy = loadPolicy(ctx.cwd);
+      policy = loadedPolicy.policy;
       const results = runChecks(ctx.cwd, detectStack(ctx.cwd, policy).checks, policy.checks.timeoutMs);
       const summary = results
         .map((r) => `${r.ok ? (r.skipped ? "SKIP" : "PASS") : "FAIL"} ${r.name}${r.skipped ? ` (${r.output})` : ""}`)
@@ -292,6 +293,27 @@ Use this to adjust the command, file change, or commit, then try again.`;
         `${policy.displayName} (${policy.profile}) gates ${gatesEnabled ? "ON" : "OFF — commit/secret/done gates disabled until /gates on or session restart"}`,
         gatesEnabled ? "info" : "warning",
       );
+    },
+  });
+
+  pi.registerCommand("status", {
+    description: "Aegis Harness: show the active policy, gates, and loaded config",
+    handler: async (_args, ctx) => {
+      loadedPolicy = loadPolicy(ctx.cwd);
+      policy = loadedPolicy.policy;
+      const missing = [
+        ...(policy.checks.includeGitleaks ? ["gitleaks"] : []),
+        ...(policy.checks.includeSemgrep ? ["semgrep"] : []),
+      ].filter((b) => !commandExists(b));
+      const lines = [
+        `Policy: ${policy.displayName} (${policy.profile})`,
+        `Gates: ${gatesEnabled ? "on" : "OFF"}`,
+        `Config: ${loadedPolicy.sourcePath ?? "default built-in policy"}`,
+        `Security tools: ${missing.length ? `missing ${missing.join(", ")}` : "all optional tools present or disabled"}`,
+      ];
+      if (loadedPolicy.warnings.length) lines.push(`Warnings: ${loadedPolicy.warnings.join(" | ")}`);
+      ctx.ui.notify(lines.join("\n"), loadedPolicy.warnings.length ? "warning" : "info");
+      ctx.ui.setStatus(policy.uiKey, `gates: ${gatesEnabled ? "on" : "OFF"} · ${policy.profile}`);
     },
   });
 }

@@ -218,6 +218,10 @@ describe("extension smoke tests", () => {
     expect(api._commands.has("check")).toBe(true);
   });
 
+  it("registers /status command", () => {
+    expect(api._commands.has("status")).toBe(true);
+  });
+
   // ── /gates command ────────────────────────────────────────────────────────
 
   it("registers /gates command (smoke check 4)", () => {
@@ -265,6 +269,18 @@ describe("extension smoke tests", () => {
     expect(ctx.notifications.length).toBeGreaterThan(0);
     expect(ctx.notifications[0].msg).toMatch(/gates/i);
     expect(ctx.statuses[0].text).toMatch(/gates:/i);
+  });
+
+  it("reports /status with policy and config details", async () => {
+    const ctx = {
+      ...makeCtx(),
+      waitForIdle: async () => {},
+    };
+    await api._commands.get("status")!.handler("", ctx as never);
+
+    expect(ctx.notifications[0].msg).toMatch(/Policy:/i);
+    expect(ctx.notifications[0].msg).toMatch(/Config:/i);
+    expect(ctx.notifications[0].msg).toMatch(/Gates:/i);
   });
 
   it("/why and /explain report the last blocked action", async () => {

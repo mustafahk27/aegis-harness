@@ -69,6 +69,7 @@ Commands:
 - `/check` runs the full check suite.
 - `/secreview` reviews the current uncommitted diff.
 - `/gates on|off|status` toggles commit/secret/done gates for the session.
+- `/status` shows the active policy, config source, and missing optional tools.
 - `/why` gives a short preview of the last block.
 - `/explain` gives the full block reason and fix.
 
@@ -82,4 +83,5 @@ Commands:
     npm test               # vitest unit suite
     npm run typecheck
 
-Edit, then `/reload` inside pi to pick up changes.
+Edit `extension/lib/policy.ts` first; `extension/lib/policy.js` is the synced runtime copy used by Pi installs.
+Then rerun `npm run sync:policy`, `npm test`, `npm run typecheck`, and `./install.sh`, followed by `/reload` inside pi.
