@@ -1,7 +1,7 @@
 # Aegis Harness
 
 Personal coding harness for [pi](https://pi.dev): makes the agent work like an
-experienced engineer (plan-first, TDD, git hygiene) and hard-blocks unsafe output
+experienced engineer (plan-first, TDD, debugging, clean code, git hygiene) and hard-blocks unsafe output
 (secrets, dangerous commands, commits that fail checks, untested completions).
 
 ## Install
@@ -33,7 +33,7 @@ Interactive verification steps (to check all gates are working end-to-end):
 
 ## What you get in every pi session
 
-- Engineering persona appended to the system prompt (plan-first, TDD, security rules)
+- Engineering persona appended to the system prompt (plan-first, TDD, debugging, clean code, security rules)
 - Skills: `plan-first`, `tdd`, `git-hygiene`, `secure-coding`, `security-review`
 - Hard gates:
   - dangerous commands blocked (sudo, pipe-to-shell, rm -rf outside project,
