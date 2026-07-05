@@ -60,6 +60,27 @@ describe("policy loading", () => {
     expect(loaded.warnings.some((warning) => warning.includes("unknown policy profile"))).toBe(true);
   });
 
+  it("warns on malformed config values and keeps safe defaults", () => {
+    const dir = tmp();
+    writeFileSync(
+      join(dir, "aegis-harness.config.json"),
+      JSON.stringify({
+        displayName: 123,
+        uiKey: false,
+        gatesEnabledByDefault: "yes",
+        dangerousCommands: { blockedBranches: ["release", 42] },
+        checks: { timeoutMs: "slow" },
+      }),
+    );
+
+    const loaded = loadPolicy(dir);
+    expect(loaded.policy.displayName).toBe("Aegis Harness");
+    expect(loaded.policy.uiKey).toBe("aegis-harness");
+    expect(loaded.policy.gatesEnabledByDefault).toBe(true);
+    expect(loaded.policy.dangerousCommands.blockedBranches).toEqual(["main", "master"]);
+    expect(loaded.warnings.length).toBeGreaterThan(0);
+  });
+
   it("falls back cleanly when policy file is absent", () => {
     const dir = tmp();
     const loaded = loadPolicy(dir);
