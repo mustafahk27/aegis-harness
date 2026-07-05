@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "sync:policy": "node ./scripts/sync-policy.mjs",
     "test": "vitest run --passWithNoTests",
     "typecheck": "tsc --noEmit"
   },
