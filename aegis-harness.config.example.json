@@ -1,4 +1,5 @@
 {
+  "profile": "balanced",
   "displayName": "Aegis Harness",
   "uiKey": "aegis-harness",
   "gatesEnabledByDefault": true,

@@ -118,9 +118,13 @@ describe("extension smoke tests", () => {
 
   it("loads without crashing (factory + session_start)", async () => {
     // If session_start fires without throwing, the factory wired up correctly
-    await expect(
-      api._trigger("session_start", { type: "session_start", reason: "startup" })
-    ).resolves.not.toThrow();
+    await expect(api._trigger("session_start", { type: "session_start", reason: "startup" })).resolves.not.toThrow();
+  });
+
+  it("shows the active policy profile in the session status", async () => {
+    const ctx = makeCtx("/tmp/aegis-harness-smoke", true);
+    await api._trigger("session_start", { type: "session_start", reason: "startup" }, ctx);
+    expect(ctx.statuses[0].text).toMatch(/balanced/i);
   });
 
   // ── dangerous-command gate ────────────────────────────────────────────────
@@ -135,8 +139,8 @@ describe("extension smoke tests", () => {
 
     expect(result).toBeDefined();
     expect(result?.block).toBe(true);
-    expect(result?.reason).toMatch(/blocked the command/i);
-    expect(result?.reason).toMatch(/Command: sudo ls/i);
+    expect(result?.reason).toMatch(/Preview:/i);
+    expect(result?.reason).toMatch(/sudo ls/i);
   });
 
   it("dangerous-command gate is always on even when gatesEnabled=false (gates off)", async () => {
@@ -173,7 +177,8 @@ describe("extension smoke tests", () => {
 
     expect(result).toBeDefined();
     expect(result?.block).toBe(true);
-    expect(result?.reason).toMatch(/secret gate/i);
+    expect(result?.reason).toMatch(/Preview:/i);
+    expect(result?.reason).toMatch(/secret pattern/i);
   });
 
   it("allows write without secrets", async () => {
@@ -203,7 +208,8 @@ describe("extension smoke tests", () => {
 
     expect(result).toBeDefined();
     expect(result?.block).toBe(true);
-    expect(result?.reason).toMatch(/secret gate/i);
+    expect(result?.reason).toMatch(/Preview:/i);
+    expect(result?.reason).toMatch(/secret pattern/i);
   });
 
   // ── /check command registers without error ────────────────────────────────
@@ -282,7 +288,7 @@ describe("extension smoke tests", () => {
     await api._commands.get("explain")!.handler("", explainCtx as never);
 
     expect(whyCtx.notifications[0].msg).toMatch(/Last block/i);
-    expect(whyCtx.notifications[0].msg).toMatch(/secret gate/i);
+    expect(whyCtx.notifications[0].msg).toMatch(/Secret preview/i);
     expect(explainCtx.notifications[0].msg).toMatch(/Why:/i);
     expect(explainCtx.notifications[0].msg).toMatch(/Fix:/i);
     expect(explainCtx.notifications[0].msg).toMatch(/AKIAIOSFODNN7EXAMPLE/i);

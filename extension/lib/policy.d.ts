@@ -6,6 +6,7 @@ export interface PolicyRule {
 }
 
 export interface AegisPolicy {
+  profile: PolicyProfileName;
   displayName: string;
   uiKey: string;
   gatesEnabledByDefault: boolean;
@@ -32,6 +33,8 @@ export interface AegisPolicy {
     pythonModuleRunners: string[];
   };
 }
+
+export type PolicyProfileName = "balanced" | "strict" | "light";
 
 export declare function defaultPolicy(): AegisPolicy;
 export declare function loadPolicy(cwd: string): {
