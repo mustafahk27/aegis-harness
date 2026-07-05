@@ -2,7 +2,7 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { isToolCallEventType } from "@earendil-works/pi-coding-agent";
 import { personaPrompt } from "./persona.js";
-import { checkDangerous, isGitCommit, isTestRun } from "./lib/commands.js";
+import { describeDangerousCommand, isGitCommit, isTestRun } from "./lib/commands.js";
 import { formatFailures, runChecks, commandExists } from "./lib/checks.js";
 import { DoneGate, isCodeFile } from "./lib/done-gate.js";
 import { scanForSecrets, scanStagedDiff, type SecretFinding } from "./lib/secrets.js";
@@ -13,7 +13,7 @@ type BlockKind = "dangerous-command" | "secret" | "commit" | "done-gate";
 
 interface BlockRecord {
   kind: BlockKind;
-  summary: string;
+  preview: string;
   why: string;
   fix: string;
   details: string[];
@@ -22,16 +22,16 @@ interface BlockRecord {
 
 function makeBlockRecord(input: {
   kind: BlockKind;
-  summary: string;
+  preview: string;
   why: string;
   fix: string;
   details?: string[];
 }): BlockRecord {
   const details = input.details ?? [];
-  const reason = [input.summary, `Why: ${input.why}`, ...details, `Fix: ${input.fix}`].join("\n");
+  const reason = [`Preview: ${input.preview}`, `Why: ${input.why}`, ...details, `Fix: ${input.fix}`].join("\n");
   return {
     kind: input.kind,
-    summary: input.summary,
+    preview: input.preview,
     why: input.why,
     fix: input.fix,
     details,
@@ -41,9 +41,13 @@ function makeBlockRecord(input: {
 
 function formatSecrets(findings: SecretFinding[], displayName: string): BlockRecord {
   const details = findings.map((f) => `  line ${f.line} [${f.rule}]: ${f.snippet}`);
+  const first = findings[0];
   return makeBlockRecord({
     kind: "secret",
-    summary: `Blocked by ${displayName} secret gate.`,
+    preview:
+      findings.length === 1
+        ? `Secret preview: line ${first?.line} matched ${first?.rule} in ${displayName}`
+        : `Secret preview: ${findings.length} matches detected in ${displayName}`,
     why: "the staged or edited content matches a known secret pattern.",
     fix: "replace the secret with an environment variable or secret manager reference, then retry.",
     details,
@@ -71,7 +75,7 @@ export default function (pi: ExtensionAPI) {
     }
 
     if (mode === "why") {
-      return `Last block (${current.kind}): ${current.summary}`;
+      return `Last block (${current.kind}): ${current.preview}`;
     }
 
     return `Last block (${current.kind}):
@@ -103,7 +107,7 @@ Use this to adjust the command, file change, or commit, then try again.`;
     for (const warning of loaded.warnings) {
       if (ctx.hasUI) ctx.ui.notify(`${policy.displayName} policy warning: ${warning}`, "warning");
     }
-    if (ctx.hasUI) ctx.ui.setStatus(policy.uiKey, `gates: ${gatesEnabled ? "on" : "OFF"}`);
+    if (ctx.hasUI) ctx.ui.setStatus(policy.uiKey, `gates: ${gatesEnabled ? "on" : "OFF"} · ${policy.profile}`);
   });
 
   // --- re-arm the done gate on real user input -------------------------
@@ -117,14 +121,14 @@ Use this to adjust the command, file change, or commit, then try again.`;
     if (isToolCallEventType("bash", event)) {
       const command = event.input.command;
       // Dangerous-command gate: NEVER disabled, even by /gates off.
-      const reason = checkDangerous(command, policy);
-      if (reason) {
+      const preview = describeDangerousCommand(command, policy);
+      if (preview) {
         const block = makeBlockRecord({
           kind: "dangerous-command",
-          summary: `${policy.displayName} blocked the command.`,
-          why: "it matches a dangerous-command rule that protects the project and your machine.",
-          fix: "rewrite the command to avoid the risky operation, or run the safest possible narrower version manually.",
-          details: [`Command: ${command}`],
+          preview: preview.preview,
+          why: preview.why,
+          fix: preview.fix,
+          details: preview.details,
         });
         rememberBlock(block);
         return { block: true, reason: block.reason };
@@ -138,7 +142,7 @@ Use this to adjust the command, file change, or commit, then try again.`;
         } catch (err) {
           const block = makeBlockRecord({
             kind: "secret",
-            summary: `${policy.displayName} secret scan failed (fail-closed).`,
+            preview: `${policy.displayName} secret scan preview: scanner error`,
             why: "the staged-diff scanner returned an error, so the harness refused to continue.",
             fix: "fix the scanner error or rerun in a context where the repo can be scanned safely.",
             details: [`Error: ${String(err)}`],
@@ -155,12 +159,13 @@ Use this to adjust the command, file change, or commit, then try again.`;
         // Commit gate: full check suite must pass.
         if (ctx.hasUI) ctx.ui.setStatus(policy.uiKey, "running pre-commit checks…");
         const results = runChecks(ctx.cwd, detectStack(ctx.cwd, policy).checks, policy.checks.timeoutMs);
-        if (ctx.hasUI) ctx.ui.setStatus(policy.uiKey, "gates: on");
+        if (ctx.hasUI) ctx.ui.setStatus(policy.uiKey, `gates: on · ${policy.profile}`);
         const failed = results.filter((r) => !r.ok);
         if (failed.length) {
+          const failedNames = failed.map((result) => result.name).join(", ");
           const block = makeBlockRecord({
             kind: "commit",
-            summary: `Commit blocked by ${policy.displayName}.`,
+            preview: `Commit preview: failing checks — ${failedNames}`,
             why: "one or more required checks failed before the commit could proceed.",
             fix: "resolve the failing checks and rerun the commit.",
             details: formatFailures(results).split("\n\n"),
@@ -220,7 +225,7 @@ Use this to adjust the command, file change, or commit, then try again.`;
     if (gatesEnabled && doneGate.shouldBounce()) {
       const block = makeBlockRecord({
         kind: "done-gate",
-        summary: "Aegis Harness done gate bounced the session.",
+        preview: "Done-gate preview: code changed without a passing test run",
         why: "you modified code this session but there was no passing test run afterwards.",
         fix: "run the project's test suite now. If tests fail, fix them. If no test covers your change, add one first.",
       });
@@ -282,9 +287,9 @@ Use this to adjust the command, file change, or commit, then try again.`;
       const arg = (args ?? "").trim();
       if (arg === "on") gatesEnabled = true;
       else if (arg === "off") gatesEnabled = false;
-      ctx.ui.setStatus(policy.uiKey, `gates: ${gatesEnabled ? "on" : "OFF"}`);
+      ctx.ui.setStatus(policy.uiKey, `gates: ${gatesEnabled ? "on" : "OFF"} · ${policy.profile}`);
       ctx.ui.notify(
-        `${policy.displayName} gates ${gatesEnabled ? "ON" : "OFF — commit/secret/done gates disabled until /gates on or session restart"}`,
+        `${policy.displayName} (${policy.profile}) gates ${gatesEnabled ? "ON" : "OFF — commit/secret/done gates disabled until /gates on or session restart"}`,
         gatesEnabled ? "info" : "warning",
       );
     },

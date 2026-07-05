@@ -52,11 +52,15 @@ without editing code. A good workflow is:
 3. Adjust only the knobs your team wants to change.
 
 Supported config shape:
+- `profile`: choose a preset baseline for the repo (`balanced`, `strict`, or `light`).
 - `displayName` / `uiKey`: rename the harness in UI messages and status text.
 - `dangerousCommands`: enable/disable individual command gates and protected branches.
 - `secrets.rules` / `secrets.placeholderPatterns`: add or relax secret detectors.
 - `checks.timeoutMs` / `checks.extraChecks`: tune check runtime and add repo-specific checks.
 - `tests.*`: change how the harness recognizes test commands for the repo.
+
+Profiles are applied first, then your repo config overrides them. That keeps the
+baseline easy to understand while still letting teams tune only the pieces they need.
 
 The bundled example file is intentionally close to the defaults, so teams can
 start from a known-safe baseline and only override what they need.
@@ -65,6 +69,8 @@ Commands:
 - `/check` runs the full check suite.
 - `/secreview` reviews the current uncommitted diff.
 - `/gates on|off|status` toggles commit/secret/done gates for the session.
+- `/why` gives a short preview of the last block.
+- `/explain` gives the full block reason and fix.
 
 ## Development
 

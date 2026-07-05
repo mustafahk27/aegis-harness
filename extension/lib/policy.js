@@ -1,7 +1,28 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 
+const POLICY_PROFILES = {
+  balanced: {},
+  strict: {
+    gatesEnabledByDefault: true,
+    checks: {
+      includeGitleaks: true,
+      includeSemgrep: true,
+      timeoutMs: 300_000,
+    },
+  },
+  light: {
+    gatesEnabledByDefault: false,
+    checks: {
+      includeGitleaks: true,
+      includeSemgrep: false,
+      timeoutMs: 180_000,
+    },
+  },
+};
+
 const DEFAULT_POLICY = {
+  profile: "balanced",
   displayName: "Aegis Harness",
   uiKey: "aegis-harness",
   gatesEnabledByDefault: true,
@@ -51,6 +72,7 @@ const DEFAULT_POLICY = {
 };
 
 const CONFIG_FILENAMES = ["aegis-harness.config.json", ".aegis-harness.json"];
+const DEFAULT_PROFILE = "balanced";
 
 function fileState(cwd, filename) {
   const file = join(cwd, filename);
@@ -59,23 +81,23 @@ function fileState(cwd, filename) {
   return `${filename}:${stat.mtimeMs}:${stat.size}`;
 }
 
-function mergePolicy(raw) {
+function mergePolicy(base, override) {
   return {
-    ...DEFAULT_POLICY,
-    ...raw,
-    dangerousCommands: { ...DEFAULT_POLICY.dangerousCommands, ...(raw?.dangerousCommands ?? {}) },
+    ...base,
+    ...override,
+    dangerousCommands: { ...base.dangerousCommands, ...(override?.dangerousCommands ?? {}) },
     secrets: {
-      ...DEFAULT_POLICY.secrets,
-      ...(raw?.secrets ?? {}),
-      rules: raw?.secrets?.rules ?? DEFAULT_POLICY.secrets.rules,
-      placeholderPatterns: raw?.secrets?.placeholderPatterns ?? DEFAULT_POLICY.secrets.placeholderPatterns,
+      ...base.secrets,
+      ...(override?.secrets ?? {}),
+      rules: override?.secrets?.rules ?? base.secrets.rules,
+      placeholderPatterns: override?.secrets?.placeholderPatterns ?? base.secrets.placeholderPatterns,
     },
     checks: {
-      ...DEFAULT_POLICY.checks,
-      ...(raw?.checks ?? {}),
-      extraChecks: raw?.checks?.extraChecks ?? DEFAULT_POLICY.checks.extraChecks,
+      ...base.checks,
+      ...(override?.checks ?? {}),
+      extraChecks: override?.checks?.extraChecks ?? base.checks.extraChecks,
     },
-    tests: { ...DEFAULT_POLICY.tests, ...(raw?.tests ?? {}) },
+    tests: { ...base.tests, ...(override?.tests ?? {}) },
   };
 }
 
@@ -91,8 +113,16 @@ export function loadPolicy(cwd) {
 
   try {
     const raw = JSON.parse(readFileSync(sourcePath, "utf8"));
-    const policy = mergePolicy(raw);
     const warnings = [];
+    const requestedProfile = raw?.profile ?? DEFAULT_PROFILE;
+    const resolvedProfile = Object.prototype.hasOwnProperty.call(POLICY_PROFILES, requestedProfile)
+      ? requestedProfile
+      : DEFAULT_PROFILE;
+    if (requestedProfile !== resolvedProfile) {
+      warnings.push(`unknown policy profile '${String(requestedProfile)}'; using '${DEFAULT_PROFILE}' instead`);
+    }
+    const policy = mergePolicy(mergePolicy(DEFAULT_POLICY, POLICY_PROFILES[resolvedProfile]), raw);
+    policy.profile = resolvedProfile;
     if (policy.secrets.rules.some((rule) => {
       try {
         // eslint-disable-next-line no-new

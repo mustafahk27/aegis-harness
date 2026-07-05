@@ -3,6 +3,19 @@ import { defaultPolicy, type AegisPolicy } from "./policy.js";
 
 const SHELLS = new Set(["sh", "bash", "zsh", "dash", "fish", "ksh", "csh", "tcsh", "ash"]);
 
+export interface CommandBlockDetails {
+  preview: string;
+  why: string;
+  fix: string;
+  details?: string[];
+}
+
+function formatBlock(details: CommandBlockDetails): string {
+  const lines = [`Blocked: ${details.preview}`, `Why: ${details.why}`, ...(details.details ?? [])];
+  lines.push(`Fix: ${details.fix}`);
+  return lines.join("\n");
+}
+
 function commandWord(segmentCommand: string): string {
   return segmentCommand.toLowerCase();
 }
@@ -28,7 +41,11 @@ function includesProtectedBranch(args: string[], protectedBranches: string[]): b
   return args.some((arg) => protectedBranches.includes(arg));
 }
 
-function recursiveRmReason(argv: string[]): string | null {
+function previewCommand(command: string): string {
+  return command.length > 120 ? `${command.slice(0, 117)}...` : command;
+}
+
+function recursiveRmDetails(argv: string[]): Pick<CommandBlockDetails, "why" | "fix"> | null {
   if (commandWord(argv[0] ?? "") !== "rm") return null;
   let recursive = false;
   const targets: string[] = [];
@@ -47,36 +64,46 @@ function recursiveRmReason(argv: string[]): string | null {
   if (!recursive) return null;
   for (const target of targets) {
     if (isProtectedPath(target)) {
-      return `Blocked: recursive rm on '${target}' can delete files outside the project.
-Why: recursive deletes on absolute, home, or parent paths are easy to mis-target and hard to recover from.
-Fix: use a relative path inside the project, for example \`rm -rf ./dist\`.`;
+      return {
+        why: `recursive deletes on '${target}' are easy to mis-target and hard to recover from.`,
+        fix: "use a relative path inside the project, for example `rm -rf ./dist`.",
+      };
     }
   }
   return null;
 }
 
-/** Returns a human-readable block reason, or null if the command is allowed. */
-export function checkDangerous(command: string, policy: AegisPolicy = defaultPolicy()): string | null {
+export function describeDangerousCommand(command: string, policy: AegisPolicy = defaultPolicy()): CommandBlockDetails | null {
   for (const segment of parseCommandLine(command)) {
     const [first] = segment.argv;
     if (!first) continue;
     const firstLower = commandWord(first);
 
     if (policy.dangerousCommands.blockSudo && firstLower === "sudo") {
-      return `Blocked: sudo is blocked by ${policy.displayName} because it can change system-wide state outside the project.
-Why: elevated commands bypass the harness’s project boundary.
-Fix: run the privileged command manually, or scope it to the smallest safe path/user you can.`;
+      return {
+        preview: previewCommand(command),
+        why: "the command uses elevated privileges outside the project boundary.",
+        fix: "run the privileged part manually, or narrow the command to the smallest safe scope.",
+      };
     }
 
     if (policy.dangerousCommands.blockPipeToShell && segment.separatorBefore === "pipe" && SHELLS.has(firstLower)) {
-      return `Blocked: pipe-to-shell into ${firstLower} can execute unreviewed code.
-Why: the file is downloaded and executed in one step with no inspection point.
-Fix: download it to a file, inspect it, then run it explicitly.`;
+      return {
+        preview: previewCommand(command),
+        why: `pipe-to-shell runs unreviewed code immediately with no inspection point.`,
+        fix: "download it first, inspect it, then execute it explicitly.",
+      };
     }
 
     if (policy.dangerousCommands.blockRecursiveRmOutsideProject) {
-      const reason = recursiveRmReason(segment.argv);
-      if (reason) return reason;
+      const reason = recursiveRmDetails(segment.argv);
+      if (reason) {
+        return {
+          preview: previewCommand(command),
+          why: reason.why,
+          fix: reason.fix,
+        };
+      }
     }
 
     if (firstLower === "git") {
@@ -84,20 +111,30 @@ Fix: download it to a file, inspect it, then run it explicitly.`;
       if (subcommand === "push" && policy.dangerousCommands.blockedBranches.length > 0) {
         const hasForce = args.includes("--force") || args.includes("-f");
         if (hasForce && includesProtectedBranch(args, policy.dangerousCommands.blockedBranches)) {
-          return `Blocked: force-pushing to ${policy.dangerousCommands.blockedBranches.join("/")} rewrites shared history.
-Why: protected branches are shared references and force-pushes can drop other people's work.
-Fix: push to a feature branch, or use \`--force-with-lease\` only when you control the branch.`;
+          return {
+            preview: previewCommand(command),
+            why: `force-pushing to protected branches rewrites shared history and can drop other people's work.`,
+            fix: "push to a feature branch, or use --force-with-lease only when you control the branch.",
+          };
         }
       }
     }
 
     if (policy.dangerousCommands.blockChmod777 && firstLower === "chmod" && segment.argv.some((token) => token === "777")) {
-      return `Blocked: chmod 777 makes files world-writable.
-Why: it grants far more access than most tasks need.
-Fix: use the least-privilege mode your task needs, such as 750 or 640.`;
+      return {
+        preview: previewCommand(command),
+        why: "the command makes files world-writable.",
+        fix: "use the least-privilege mode the task needs, such as 750 or 640.",
+      };
     }
   }
   return null;
+}
+
+/** Returns a human-readable block reason, or null if the command is allowed. */
+export function checkDangerous(command: string, policy: AegisPolicy = defaultPolicy()): string | null {
+  const details = describeDangerousCommand(command, policy);
+  return details ? formatBlock(details) : null;
 }
 
 /** True if the command line invokes `git commit` anywhere (incl. chained commands). */
