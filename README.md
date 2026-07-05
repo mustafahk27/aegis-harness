@@ -1,87 +1,55 @@
 # Aegis Harness
 
-Personal coding harness for [pi](https://pi.dev): makes the agent work like an
-experienced engineer (plan-first, TDD, debugging, clean code, git hygiene) and hard-blocks unsafe output
-(secrets, dangerous commands, commits that fail checks, untested completions).
+Aegis Harness is my personalized coding harness for [pi](https://pi.dev). It shapes Pi to behave more like an experienced software engineer: it plans before changing code, prefers tests and debugging over guesswork, keeps diffs clean, and refuses risky or out-of-scope actions.
 
-## Install
+## What it does
 
-    npm install            # dev toolchain for tests/typecheck
-    ./install.sh           # copies into ~/.pi/agent/
-    brew install gitleaks semgrep   # optional, stronger scanning
+- Adds a project-specific engineering persona to each Pi session
+- Encourages plan-first work for non-trivial tasks
+- Pushes TDD, debugging, and clean-code habits
+- Blocks risky commands, secret-like values, and untested completion flows
+- Surfaces clearer block reasons plus `/why` and `/explain`
+- Adds lightweight checks like `/check`, `/secreview`, `/gates`, and `/status`
+- Supports per-repo policy tuning without editing the extension itself
 
-Authenticate pi with your ChatGPT subscription: run `pi`, then `/login` →
-"ChatGPT Plus/Pro (Codex)". No API key needed; nothing here touches auth.
+## How to use it
 
-## First run
+1. Install dependencies: `npm install`
+2. Run the installer: `./install.sh`
+3. Optional stronger scanning: `brew install gitleaks semgrep`
+4. Start `pi`, log in if needed, then reload the session with `/reload` or restart Pi
 
-After running `./install.sh`, start (or restart) pi and run `/login` to connect
-your ChatGPT Plus/Pro (Codex) account if you haven't already. Then verify the
-harness loaded with `/check` in any pi session — it runs the project's check
-suite and reports pass/fail/skip per check, confirming the harness is active.
+## Quick checks
 
-Interactive verification steps (to check all gates are working end-to-end):
-1. `commit the staged changes with message "init"` in a repo with a failing test
-   → expect **commit blocked**, reason shows the failing check.
-2. Fix the test, then `try the commit again` → expect commit succeeds.
-3. `add a constant AWS_KEY = "AKIAIOSFODNN7EXAMPLE" to a new file keys.js`
-   → expect **write blocked** by secret gate.
-4. `change test.js to print "hi" before exiting, and consider the task done
-   without running anything` → expect the **done-gate bounce** and a subsequent
-   test run.
-5. `/skill:secure-coding` → expect the skill content loads.
+Try these in a target project to see the harness working:
 
-## What you get in every pi session
+- Run `/check`
+- Ask for `/status`
+- Try `sudo ls`
+- Try writing a fake AWS key
+- Make a code change and finish without tests
+- Trigger a block, then ask `/why` or `/explain`
 
-- Engineering persona appended to the system prompt (plan-first, TDD, debugging, clean code, security rules)
-- Skills: `plan-first`, `tdd`, `git-hygiene`, `secure-coding`, `security-review`
-- Hard gates:
-  - dangerous commands blocked (sudo, pipe-to-shell, rm -rf outside project,
-    force-push to main, chmod 777) — cannot be disabled
-  - secret scanning on every write/edit and on staged diffs (fail-closed)
-  - `git commit` runs the project's lint + tests + gitleaks + semgrep first
-  - done gate: agent can't conclude a code change without a passing test run
+## Policy config
 
-## Policy file
+You can tune behavior per repo with `aegis-harness.config.json`.
 
-Drop an `aegis-harness.config.json` file in a target repo to tune the harness
-without editing code. A good workflow is:
+Supported knobs include:
 
-1. Copy `aegis-harness.config.example.json` into the target repo.
-2. Rename it to `aegis-harness.config.json`.
-3. Adjust only the knobs your team wants to change.
+- `profile`: `balanced`, `strict`, or `light`
+- `displayName` / `uiKey`
+- `dangerousCommands`
+- `secrets.rules` / `secrets.placeholderPatterns`
+- `checks.timeoutMs` / `checks.extraChecks`
+- `tests.*`
 
-Supported config shape:
-- `profile`: choose a preset baseline for the repo (`balanced`, `strict`, or `light`).
-- `displayName` / `uiKey`: rename the harness in UI messages and status text.
-- `dangerousCommands`: enable/disable individual command gates and protected branches.
-- `secrets.rules` / `secrets.placeholderPatterns`: add or relax secret detectors.
-- `checks.timeoutMs` / `checks.extraChecks`: tune check runtime and add repo-specific checks.
-- `tests.*`: change how the harness recognizes test commands for the repo.
-
-Profiles are applied first, then your repo config overrides them. That keeps the
-baseline easy to understand while still letting teams tune only the pieces they need.
-
-The bundled example file is intentionally close to the defaults, so teams can
-start from a known-safe baseline and only override what they need.
-
-Commands:
-- `/check` runs the full check suite.
-- `/secreview` reviews the current uncommitted diff.
-- `/gates on|off|status` toggles commit/secret/done gates for the session.
-- `/status` shows the active policy, config source, and missing optional tools.
-- `/why` gives a short preview of the last block.
-- `/explain` gives the full block reason and fix.
+Profiles apply first, then repo-specific config overrides them.
 
 ## Development
 
-    npm install            # install dev dependencies
-    npx vitest run         # full unit suite (91+ tests)
-    npx tsc --noEmit       # typecheck
-
-    # shortcuts defined in package.json
-    npm test               # vitest unit suite
-    npm run typecheck
+- `npm test`
+- `npm run typecheck`
+- `npm run sync:policy`
+- `./install.sh` then `/reload` in Pi
 
 Edit `extension/lib/policy.ts` first; `extension/lib/policy.js` is the synced runtime copy used by Pi installs.
-Then rerun `npm run sync:policy`, `npm test`, `npm run typecheck`, and `./install.sh`, followed by `/reload` inside pi.
