@@ -18,8 +18,9 @@ describe("harness modes", () => {
 
   it("renders mode guidance for the persona prompt", () => {
     const prompt = formatHarnessModePrompt("review");
-    expect(prompt).toMatch(/Working mode: Review/i);
-    expect(prompt).toMatch(/inspect the actual diff/i);
+    expect(prompt).toMatch(/Review mode/i);
+    expect(prompt).toMatch(/inspect the diff/i);
+    expect(prompt.length).toBeLessThan(140);
   });
 
   it("renders a readable mode list and status line", () => {
