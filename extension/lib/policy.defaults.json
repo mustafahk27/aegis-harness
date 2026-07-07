@@ -4,6 +4,7 @@
     "displayName": "Aegis Harness",
     "uiKey": "aegis-harness",
     "gatesEnabledByDefault": true,
+    "defaultMode": "feature",
     "dangerousCommands": {
       "blockSudo": true,
       "blockRecursiveRmOutsideProject": true,

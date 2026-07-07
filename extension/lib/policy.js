@@ -36,6 +36,18 @@ function sanitizeBoolean(value, field, warnings) {
     warnings.push(`invalid policy value for '${field}' — expected a boolean`);
     return undefined;
 }
+function sanitizeMode(value, field, warnings) {
+    if (value === undefined)
+        return undefined;
+    if (typeof value === "string") {
+        const normalized = value.toLowerCase();
+        if (normalized === "feature" || normalized === "debug" || normalized === "refactor" || normalized === "review") {
+            return normalized;
+        }
+    }
+    warnings.push(`invalid policy value for '${field}' — expected one of feature, debug, refactor, or review`);
+    return undefined;
+}
 function sanitizeNumber(value, field, warnings) {
     if (value === undefined)
         return undefined;
@@ -182,13 +194,16 @@ function sanitizePolicyOverrides(raw, warnings) {
     if (raw.profile !== undefined && typeof raw.profile !== "string") {
         warnings.push("invalid policy value for 'profile' — expected a string");
     }
+    const displayName = sanitizeString(raw.displayName, "displayName", warnings);
+    const uiKey = sanitizeString(raw.uiKey, "uiKey", warnings);
+    const gatesEnabledByDefault = sanitizeBoolean(raw.gatesEnabledByDefault, "gatesEnabledByDefault", warnings);
+    const defaultMode = sanitizeMode(raw.defaultMode, "defaultMode", warnings);
     return {
         ...(profile ? { profile } : {}),
-        ...(sanitizeString(raw.displayName, "displayName", warnings) ? { displayName: sanitizeString(raw.displayName, "displayName", warnings) } : {}),
-        ...(sanitizeString(raw.uiKey, "uiKey", warnings) ? { uiKey: sanitizeString(raw.uiKey, "uiKey", warnings) } : {}),
-        ...(sanitizeBoolean(raw.gatesEnabledByDefault, "gatesEnabledByDefault", warnings) === undefined
-            ? {}
-            : { gatesEnabledByDefault: sanitizeBoolean(raw.gatesEnabledByDefault, "gatesEnabledByDefault", warnings) }),
+        ...(displayName ? { displayName } : {}),
+        ...(uiKey ? { uiKey } : {}),
+        ...(gatesEnabledByDefault === undefined ? {} : { gatesEnabledByDefault }),
+        ...(defaultMode ? { defaultMode } : {}),
         ...(dangerousCommands ? { dangerousCommands } : {}),
         ...(secrets ? { secrets } : {}),
         ...(checks ? { checks } : {}),
