@@ -5,7 +5,14 @@ import { personaPrompt } from "./persona.js";
 import { describeDangerousCommand, isGitCommit, isTestRun } from "./lib/commands.js";
 import { formatFailures, runChecks, commandExists } from "./lib/checks.js";
 import { DoneGate, isCodeFile } from "./lib/done-gate.js";
-import { defaultHarnessMode, formatHarnessModeList, formatHarnessModeStatus, parseHarnessMode, type HarnessModeName } from "./lib/modes.js";
+import {
+  defaultHarnessMode,
+  formatHarnessModeList,
+  formatHarnessModeStatus,
+  getHarnessModeSpec,
+  parseHarnessMode,
+  type HarnessModeName,
+} from "./lib/modes.js";
 import { scanForSecrets, scanStagedDiff, type SecretFinding } from "./lib/secrets.js";
 import { detectStack } from "./lib/stack.js";
 import { loadPolicy } from "./lib/policy.js";
@@ -56,6 +63,7 @@ function formatSecrets(findings: SecretFinding[], displayName: string): BlockRec
 }
 
 export default function (pi: ExtensionAPI) {
+  const modeNames: HarnessModeName[] = ["feature", "debug", "refactor", "review"];
   const doneGate = new DoneGate();
   let gatesEnabled = true;
   let loadedPolicy = loadPolicy(process.cwd());
@@ -296,6 +304,27 @@ Use this to adjust the command, file change, or commit, then try again.`;
     handler: async (args, ctx) => {
       const arg = (args ?? "").trim().toLowerCase();
       if (!arg || arg === "status" || arg === "list") {
+        if (!arg && ctx.hasUI) {
+          const selection = await ctx.ui.select(
+            "Choose the active working mode",
+            modeNames.map((mode) => {
+              const spec = getHarnessModeSpec(mode);
+              return `${spec.title} — ${spec.summary}`;
+            }),
+          );
+          if (!selection) {
+            ctx.ui.notify(`Mode stays on ${activeMode}.`, "info");
+            refreshStatus(ctx);
+            return;
+          }
+          const picked = parseHarnessMode(selection.split(" — ")[0]);
+          if (picked) {
+            activeMode = picked;
+            ctx.ui.notify(`Working mode switched to ${activeMode}.`, "info");
+            refreshStatus(ctx);
+            return;
+          }
+        }
         ctx.ui.notify(
           [
             `Active mode: ${activeMode}`,
