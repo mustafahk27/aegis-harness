@@ -8,6 +8,7 @@ Aegis Harness is my personalized coding harness for [pi](https://pi.dev). It sha
 - Encourages plan-first work for non-trivial tasks
 - Pushes TDD, debugging, and clean-code habits
 - Blocks risky commands, secret-like values, and untested completion flows
+- Adds working modes for `/mode feature`, `/mode debug`, `/mode refactor`, and `/mode review`
 - Surfaces clearer block reasons plus `/why` and `/explain`
 - Adds lightweight checks like `/check`, `/secreview`, `/gates`, and `/status`
 - Supports per-repo policy tuning without editing the extension itself
@@ -29,6 +30,7 @@ Try these in a target project to see the harness working:
 - Try writing a fake AWS key
 - Make a code change and finish without tests
 - Trigger a block, then ask `/why` or `/explain`
+- Switch modes with `/mode debug`, `/mode refactor`, or `/mode review`
 
 ## Policy config
 
