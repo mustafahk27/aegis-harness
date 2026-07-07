@@ -20,4 +20,9 @@ describe("personaPrompt", () => {
     expect(prompt).toContain(formatHarnessModePrompt("debug"));
     expect(personaPrompt(defaultHarnessMode())).toContain(formatHarnessModePrompt("feature"));
   });
+
+  it("keeps the mode add-on compact", () => {
+    expect(formatHarnessModePrompt("debug").length).toBeLessThan(140);
+    expect(formatHarnessModePrompt("feature").length).toBeLessThan(140);
+  });
 });

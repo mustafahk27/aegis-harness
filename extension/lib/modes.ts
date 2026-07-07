@@ -4,7 +4,7 @@ export interface HarnessModeSpec {
   name: HarnessModeName;
   title: string;
   summary: string;
-  principles: string[];
+  addon: string;
 }
 
 const MODE_ORDER: HarnessModeName[] = ["feature", "debug", "refactor", "review"];
@@ -14,45 +14,25 @@ const MODE_SPECS: Record<HarnessModeName, HarnessModeSpec> = {
     name: "feature",
     title: "Feature",
     summary: "Build new behavior in small, testable slices.",
-    principles: [
-      "clarify the user goal and constraints before changing code",
-      "prefer vertical slices that ship value incrementally",
-      "add or update tests alongside behavior changes",
-      "keep diffs focused and avoid scope creep",
-    ],
+    addon: "clarify the goal, ship a small slice, and add tests alongside behavior changes.",
   },
   debug: {
     name: "debug",
     title: "Debug",
     summary: "Reproduce the issue, isolate the cause, and verify the smallest safe fix.",
-    principles: [
-      "reproduce the bug before guessing at a fix",
-      "inspect the failing path, logs, inputs, and assumptions",
-      "change the smallest thing that can actually solve the issue",
-      "verify the fix with a targeted test or repro step",
-    ],
+    addon: "reproduce first, inspect evidence, fix the smallest cause, and verify the result.",
   },
   refactor: {
     name: "refactor",
     title: "Refactor",
     summary: "Improve structure without changing behavior unless tests demand it.",
-    principles: [
-      "preserve behavior unless a test-backed change says otherwise",
-      "refactor in small steps with tests staying green",
-      "delete duplication, dead code, and awkward indirection",
-      "favor simpler names, smaller functions, and clearer flow",
-    ],
+    addon: "preserve behavior, remove duplication, and keep tests green while simplifying structure.",
   },
   review: {
     name: "review",
     title: "Review",
     summary: "Read code like a reviewer and surface risks before shipping.",
-    principles: [
-      "inspect the actual diff and surrounding code, not memory",
-      "call out correctness, security, and maintainability risks clearly",
-      "prefer actionable feedback with a suggested fix or next step",
-      "do not approve work that still needs tests or validation",
-    ],
+    addon: "inspect the diff, call out risks clearly, and suggest the safest next fix.",
   },
 };
 
@@ -81,15 +61,9 @@ export function getHarnessModeSpec(mode: HarnessModeName): HarnessModeSpec {
 export function formatHarnessModePrompt(mode: HarnessModeName): string {
   const spec = MODE_SPECS[mode];
   return `
-## Working mode: ${spec.title}
+## ${spec.title} mode
 
-${spec.summary}
-
-Rules for this mode:
-- ${spec.principles[0]}
-- ${spec.principles[1]}
-- ${spec.principles[2]}
-- ${spec.principles[3]}
+${spec.addon}
 `.trim();
 }
 

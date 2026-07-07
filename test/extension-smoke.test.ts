@@ -305,8 +305,8 @@ describe("extension smoke tests", () => {
       systemPromptOptions: {},
     })) as { systemPrompt?: string } | undefined;
 
-    expect(result?.systemPrompt).toMatch(/Working mode: Debug/i);
-    expect(result?.systemPrompt).toMatch(/reproduce the bug/i);
+    expect(result?.systemPrompt).toMatch(/Debug mode/i);
+    expect(result?.systemPrompt).toMatch(/reproduce first/i);
   });
 
   it("shows a picker when /mode is called without args", async () => {
@@ -457,6 +457,6 @@ describe("extension smoke tests", () => {
 
     expect(result?.systemPrompt).toMatch(/^BASE\n\n/);
     expect(result?.systemPrompt).toMatch(/Engineering discipline/i);
-    expect(result?.systemPrompt).toMatch(/Working mode: Feature/i);
+    expect(result?.systemPrompt).toMatch(/Feature mode/i);
   });
 });
