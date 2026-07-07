@@ -309,6 +309,23 @@ describe("extension smoke tests", () => {
     expect(result?.systemPrompt).toMatch(/reproduce the bug/i);
   });
 
+  it("shows a picker when /mode is called without args", async () => {
+    const base = makeCtx("/tmp/aegis-harness-smoke", true);
+    const ctx = {
+      ...base,
+      waitForIdle: async () => {},
+      ui: {
+        ...base.ui,
+        select: async () => "Review — Read code like a reviewer and surface risks before shipping.",
+      },
+    };
+
+    await api._commands.get("mode")!.handler("", ctx as never);
+
+    expect(ctx.notifications.at(-1)?.msg).toMatch(/working mode switched to review/i);
+    expect(ctx.statuses.at(-1)?.text).toMatch(/mode: review/i);
+  });
+
   it("/why and /explain report the last blocked action", async () => {
     const whyCtx = makeCtx();
     const explainCtx = makeCtx();
