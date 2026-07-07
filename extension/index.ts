@@ -5,6 +5,7 @@ import { personaPrompt } from "./persona.js";
 import { describeDangerousCommand, isGitCommit, isTestRun } from "./lib/commands.js";
 import { formatFailures, runChecks, commandExists } from "./lib/checks.js";
 import { DoneGate, isCodeFile } from "./lib/done-gate.js";
+import { defaultHarnessMode, formatHarnessModeList, formatHarnessModeStatus, parseHarnessMode, type HarnessModeName } from "./lib/modes.js";
 import { scanForSecrets, scanStagedDiff, type SecretFinding } from "./lib/secrets.js";
 import { detectStack } from "./lib/stack.js";
 import { loadPolicy } from "./lib/policy.js";
@@ -59,6 +60,7 @@ export default function (pi: ExtensionAPI) {
   let gatesEnabled = true;
   let loadedPolicy = loadPolicy(process.cwd());
   let policy = loadedPolicy.policy;
+  let activeMode: HarnessModeName = policy.defaultMode ?? defaultHarnessMode();
   let blockHistory: BlockRecord[] = [];
 
   function rememberBlock(block: BlockRecord) {
@@ -84,9 +86,15 @@ ${current.reason}
 Use this to adjust the command, file change, or commit, then try again.`;
   }
 
+  function refreshStatus(ctx?: { hasUI: boolean; ui: { setStatus: (key: string, text: string) => void } }): void {
+    if (ctx?.ui) {
+      ctx.ui.setStatus(policy.uiKey, `${formatHarnessModeStatus(activeMode)} · gates: ${gatesEnabled ? "on" : "OFF"} · ${policy.profile}`);
+    }
+  }
+
   // --- persona ---------------------------------------------------------
   pi.on("before_agent_start", async (event) => {
-    return { systemPrompt: `${event.systemPrompt}\n\n${personaPrompt()}` };
+    return { systemPrompt: `${event.systemPrompt}\n\n${personaPrompt(activeMode)}` };
   });
 
   // --- session start: reset state, warn about missing optional tools ---
@@ -94,6 +102,7 @@ Use this to adjust the command, file change, or commit, then try again.`;
     loadedPolicy = loadPolicy(ctx.cwd);
     policy = loadedPolicy.policy;
     gatesEnabled = policy.gatesEnabledByDefault;
+    activeMode = policy.defaultMode ?? defaultHarnessMode();
     clearBlock();
     const missing = [
       ...(policy.checks.includeGitleaks ? ["gitleaks"] : []),
@@ -108,7 +117,7 @@ Use this to adjust the command, file change, or commit, then try again.`;
     for (const warning of loadedPolicy.warnings) {
       if (ctx.hasUI) ctx.ui.notify(`${policy.displayName} policy warning: ${warning}`, "warning");
     }
-    if (ctx.hasUI) ctx.ui.setStatus(policy.uiKey, `gates: ${gatesEnabled ? "on" : "OFF"} · ${policy.profile}`);
+    refreshStatus(ctx);
   });
 
   // --- re-arm the done gate on real user input -------------------------
@@ -160,7 +169,7 @@ Use this to adjust the command, file change, or commit, then try again.`;
         // Commit gate: full check suite must pass.
         if (ctx.hasUI) ctx.ui.setStatus(policy.uiKey, "running pre-commit checks…");
         const results = runChecks(ctx.cwd, detectStack(ctx.cwd, policy).checks, policy.checks.timeoutMs);
-        if (ctx.hasUI) ctx.ui.setStatus(policy.uiKey, `gates: on · ${policy.profile}`);
+        refreshStatus(ctx);
         const failed = results.filter((r) => !r.ok);
         if (failed.length) {
           const failedNames = failed.map((result) => result.name).join(", ");
@@ -282,15 +291,48 @@ Use this to adjust the command, file change, or commit, then try again.`;
     },
   });
 
+  pi.registerCommand("mode", {
+    description: "Aegis Harness: feature|debug|refactor|review — switch or inspect the active working mode",
+    handler: async (args, ctx) => {
+      const arg = (args ?? "").trim().toLowerCase();
+      if (!arg || arg === "status" || arg === "list") {
+        ctx.ui.notify(
+          [
+            `Active mode: ${activeMode}`,
+            "Available modes:",
+            formatHarnessModeList(),
+            "Use /mode feature|debug|refactor|review to switch the current mode.",
+          ].join("\n"),
+          "info",
+        );
+        refreshStatus(ctx);
+        return;
+      }
+
+      const nextMode = parseHarnessMode(arg);
+      if (!nextMode) {
+        ctx.ui.notify(
+          `Unknown mode '${arg}'. Use /mode feature|debug|refactor|review or /mode status.`,
+          "warning",
+        );
+        return;
+      }
+
+      activeMode = nextMode;
+      refreshStatus(ctx);
+      ctx.ui.notify(`Working mode switched to ${activeMode}.`, "info");
+    },
+  });
+
   pi.registerCommand("gates", {
     description: "Aegis Harness: on|off|status — toggle commit/secret/done gates (dangerous-command gate always on)",
     handler: async (args, ctx) => {
       const arg = (args ?? "").trim();
       if (arg === "on") gatesEnabled = true;
       else if (arg === "off") gatesEnabled = false;
-      ctx.ui.setStatus(policy.uiKey, `gates: ${gatesEnabled ? "on" : "OFF"} · ${policy.profile}`);
+      refreshStatus(ctx);
       ctx.ui.notify(
-        `${policy.displayName} (${policy.profile}) gates ${gatesEnabled ? "ON" : "OFF — commit/secret/done gates disabled until /gates on or session restart"}`,
+        `${policy.displayName} (${policy.profile}, ${activeMode} mode) gates ${gatesEnabled ? "ON" : "OFF — commit/secret/done gates disabled until /gates on or session restart"}`,
         gatesEnabled ? "info" : "warning",
       );
     },
@@ -307,13 +349,14 @@ Use this to adjust the command, file change, or commit, then try again.`;
       ].filter((b) => !commandExists(b));
       const lines = [
         `Policy: ${policy.displayName} (${policy.profile})`,
+        `Mode: ${activeMode}`,
         `Gates: ${gatesEnabled ? "on" : "OFF"}`,
         `Config: ${loadedPolicy.sourcePath ?? "default built-in policy"}`,
         `Security tools: ${missing.length ? `missing ${missing.join(", ")}` : "all optional tools present or disabled"}`,
       ];
       if (loadedPolicy.warnings.length) lines.push(`Warnings: ${loadedPolicy.warnings.join(" | ")}`);
       ctx.ui.notify(lines.join("\n"), loadedPolicy.warnings.length ? "warning" : "info");
-      ctx.ui.setStatus(policy.uiKey, `gates: ${gatesEnabled ? "on" : "OFF"} · ${policy.profile}`);
+      refreshStatus(ctx);
     },
   });
 }
