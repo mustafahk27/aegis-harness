@@ -2,6 +2,7 @@ import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { CheckCommand } from "./stack.js";
+import type { HarnessModeName } from "./modes.js";
 
 export interface SecretRuleConfig {
   rule: string;
@@ -15,6 +16,7 @@ export interface AegisPolicy {
   displayName: string;
   uiKey: string;
   gatesEnabledByDefault: boolean;
+  defaultMode: HarnessModeName;
   dangerousCommands: {
     blockSudo: boolean;
     blockRecursiveRmOutsideProject: boolean;
@@ -46,6 +48,7 @@ export interface PolicyConfigOverrides {
   displayName?: string;
   uiKey?: string;
   gatesEnabledByDefault?: boolean;
+  defaultMode?: HarnessModeName;
   dangerousCommands?: Partial<AegisPolicy["dangerousCommands"]>;
   secrets?: {
     rules?: SecretRuleConfig[];
@@ -100,6 +103,18 @@ function sanitizeBoolean(value: unknown, field: string, warnings: string[]): boo
   if (value === undefined) return undefined;
   if (typeof value === "boolean") return value;
   warnings.push(`invalid policy value for '${field}' — expected a boolean`);
+  return undefined;
+}
+
+function sanitizeMode(value: unknown, field: string, warnings: string[]): HarnessModeName | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value === "string") {
+    const normalized = value.toLowerCase();
+    if (normalized === "feature" || normalized === "debug" || normalized === "refactor" || normalized === "review") {
+      return normalized;
+    }
+  }
+  warnings.push(`invalid policy value for '${field}' — expected one of feature, debug, refactor, or review`);
   return undefined;
 }
 
@@ -260,13 +275,17 @@ function sanitizePolicyOverrides(raw: unknown, warnings: string[]): PolicyConfig
     warnings.push("invalid policy value for 'profile' — expected a string");
   }
 
+  const displayName = sanitizeString(raw.displayName, "displayName", warnings);
+  const uiKey = sanitizeString(raw.uiKey, "uiKey", warnings);
+  const gatesEnabledByDefault = sanitizeBoolean(raw.gatesEnabledByDefault, "gatesEnabledByDefault", warnings);
+  const defaultMode = sanitizeMode(raw.defaultMode, "defaultMode", warnings);
+
   return {
     ...(profile ? { profile } : {}),
-    ...(sanitizeString(raw.displayName, "displayName", warnings) ? { displayName: sanitizeString(raw.displayName, "displayName", warnings)! } : {}),
-    ...(sanitizeString(raw.uiKey, "uiKey", warnings) ? { uiKey: sanitizeString(raw.uiKey, "uiKey", warnings)! } : {}),
-    ...(sanitizeBoolean(raw.gatesEnabledByDefault, "gatesEnabledByDefault", warnings) === undefined
-      ? {}
-      : { gatesEnabledByDefault: sanitizeBoolean(raw.gatesEnabledByDefault, "gatesEnabledByDefault", warnings)! }),
+    ...(displayName ? { displayName } : {}),
+    ...(uiKey ? { uiKey } : {}),
+    ...(gatesEnabledByDefault === undefined ? {} : { gatesEnabledByDefault }),
+    ...(defaultMode ? { defaultMode } : {}),
     ...(dangerousCommands ? { dangerousCommands } : {}),
     ...(secrets ? { secrets } : {}),
     ...(checks ? { checks } : {}),

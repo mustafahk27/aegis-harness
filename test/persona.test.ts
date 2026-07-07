@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { personaPrompt } from "../extension/persona.js";
+import { defaultHarnessMode, formatHarnessModePrompt } from "../extension/lib/modes.js";
 
 describe("personaPrompt", () => {
   it("covers plan-first, TDD, debugging, clean code, git hygiene, and security rules", () => {
@@ -12,5 +13,11 @@ describe("personaPrompt", () => {
   });
   it("stays under 2500 characters to limit per-turn token overhead", () => {
     expect(personaPrompt().length).toBeLessThan(2500);
+  });
+
+  it("includes the active working mode guidance", () => {
+    const prompt = personaPrompt("debug");
+    expect(prompt).toContain(formatHarnessModePrompt("debug"));
+    expect(personaPrompt(defaultHarnessMode())).toContain(formatHarnessModePrompt("feature"));
   });
 });

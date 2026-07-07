@@ -222,6 +222,10 @@ describe("extension smoke tests", () => {
     expect(api._commands.has("status")).toBe(true);
   });
 
+  it("registers /mode command", () => {
+    expect(api._commands.has("mode")).toBe(true);
+  });
+
   // ── /gates command ────────────────────────────────────────────────────────
 
   it("registers /gates command (smoke check 4)", () => {
@@ -279,8 +283,30 @@ describe("extension smoke tests", () => {
     await api._commands.get("status")!.handler("", ctx as never);
 
     expect(ctx.notifications[0].msg).toMatch(/Policy:/i);
+    expect(ctx.notifications[0].msg).toMatch(/Mode:/i);
     expect(ctx.notifications[0].msg).toMatch(/Config:/i);
     expect(ctx.notifications[0].msg).toMatch(/Gates:/i);
+  });
+
+  it("switches modes and reflects the new mode in the prompt", async () => {
+    const ctx = {
+      ...makeCtx("/tmp/aegis-harness-smoke", true),
+      waitForIdle: async () => {},
+    };
+    await api._commands.get("mode")!.handler("debug", ctx as never);
+
+    expect(ctx.notifications.at(-1)?.msg).toMatch(/debug/i);
+    expect(ctx.statuses.at(-1)?.text).toMatch(/mode: debug/i);
+
+    const result = (await api._trigger("before_agent_start", {
+      type: "before_agent_start",
+      prompt: "help",
+      systemPrompt: "BASE",
+      systemPromptOptions: {},
+    })) as { systemPrompt?: string } | undefined;
+
+    expect(result?.systemPrompt).toMatch(/Working mode: Debug/i);
+    expect(result?.systemPrompt).toMatch(/reproduce the bug/i);
   });
 
   it("/why and /explain report the last blocked action", async () => {
@@ -414,5 +440,6 @@ describe("extension smoke tests", () => {
 
     expect(result?.systemPrompt).toMatch(/^BASE\n\n/);
     expect(result?.systemPrompt).toMatch(/Engineering discipline/i);
+    expect(result?.systemPrompt).toMatch(/Working mode: Feature/i);
   });
 });
