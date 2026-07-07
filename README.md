@@ -3,6 +3,7 @@
 Aegis Harness is my personalized coding harness for [pi](https://pi.dev). It shapes Pi to behave more like an experienced software engineer: it plans before changing code, prefers tests and debugging over guesswork, keeps diffs clean, and refuses risky or out-of-scope actions.
 
 See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the prioritized path to make this project more useful, trustworthy, and shareable.
+For a quick public-facing walkthrough, see [`docs/DEMO.md`](docs/DEMO.md).
 
 ## What it does
 
