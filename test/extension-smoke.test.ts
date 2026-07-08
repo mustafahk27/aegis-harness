@@ -346,6 +346,21 @@ describe("extension smoke tests", () => {
     expect(ctx.statuses.at(-1)?.text).toMatch(/mode: review/i);
   });
 
+  it("session_start restores the default mode and gates", async () => {
+    const ctx = makeCtx("/tmp/aegis-harness-smoke", true);
+    const commandCtx = { ...ctx, waitForIdle: async () => {} };
+    const modeCmd = api._commands.get("mode")!;
+    const gatesCmd = api._commands.get("gates")!;
+
+    await modeCmd.handler("debug", commandCtx as never);
+    await gatesCmd.handler("off", commandCtx as never);
+
+    await api._trigger("session_start", { type: "session_start", reason: "reload" }, ctx);
+
+    expect(ctx.statuses.at(-1)?.text).toMatch(/mode: feature/i);
+    expect(ctx.statuses.at(-1)?.text).toMatch(/gates: on/i);
+  });
+
   it("/why and /explain report the last blocked action", async () => {
     const whyCtx = makeCtx();
     const explainCtx = makeCtx();
