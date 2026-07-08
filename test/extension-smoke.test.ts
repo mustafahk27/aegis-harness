@@ -226,6 +226,10 @@ describe("extension smoke tests", () => {
     expect(api._commands.has("mode")).toBe(true);
   });
 
+  it("registers /modes command", () => {
+    expect(api._commands.has("modes")).toBe(true);
+  });
+
   // ── /gates command ────────────────────────────────────────────────────────
 
   it("registers /gates command (smoke check 4)", () => {
@@ -284,8 +288,24 @@ describe("extension smoke tests", () => {
 
     expect(ctx.notifications[0].msg).toMatch(/Policy:/i);
     expect(ctx.notifications[0].msg).toMatch(/Mode:/i);
+    expect(ctx.notifications[0].msg).toMatch(/Mode detail:/i);
     expect(ctx.notifications[0].msg).toMatch(/Config:/i);
     expect(ctx.notifications[0].msg).toMatch(/Gates:/i);
+  });
+
+  it("reports /modes with the active mode and available options", async () => {
+    const ctx = {
+      ...makeCtx(),
+      waitForIdle: async () => {},
+    };
+    await api._commands.get("modes")!.handler("", ctx as never);
+
+    expect(ctx.notifications[0].msg).toMatch(/Active mode:/i);
+    expect(ctx.notifications[0].msg).toMatch(/Mode detail:/i);
+    expect(ctx.notifications[0].msg).toMatch(/feature:/i);
+    expect(ctx.notifications[0].msg).toMatch(/debug:/i);
+    expect(ctx.notifications[0].msg).toMatch(/refactor:/i);
+    expect(ctx.notifications[0].msg).toMatch(/review:/i);
   });
 
   it("switches modes and reflects the new mode in the prompt", async () => {

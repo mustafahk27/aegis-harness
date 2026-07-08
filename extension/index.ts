@@ -9,6 +9,7 @@ import {
   defaultHarnessMode,
   formatHarnessModeList,
   formatHarnessModeStatus,
+  formatHarnessModeSummary,
   getHarnessModeSpec,
   parseHarnessMode,
   type HarnessModeName,
@@ -299,6 +300,22 @@ Use this to adjust the command, file change, or commit, then try again.`;
     },
   });
 
+  pi.registerCommand("modes", {
+    description: "Aegis Harness: show the available working modes and the active one",
+    handler: async (_args, ctx) => {
+      ctx.ui.notify(
+        [
+          `Active mode: ${activeMode}`,
+          `Mode detail: ${formatHarnessModeSummary(activeMode)}`,
+          "Available modes:",
+          formatHarnessModeList(),
+          "Use /mode to open the picker or /mode <name> to switch directly.",
+        ].join("\n"),
+        "info",
+      );
+    },
+  });
+
   pi.registerCommand("mode", {
     description: "Aegis Harness: feature|debug|refactor|review — switch or inspect the active working mode",
     handler: async (args, ctx) => {
@@ -379,6 +396,7 @@ Use this to adjust the command, file change, or commit, then try again.`;
       const lines = [
         `Policy: ${policy.displayName} (${policy.profile})`,
         `Mode: ${activeMode}`,
+        `Mode detail: ${formatHarnessModeSummary(activeMode)}`,
         `Gates: ${gatesEnabled ? "on" : "OFF"}`,
         `Config: ${loadedPolicy.sourcePath ?? "default built-in policy"}`,
         `Security tools: ${missing.length ? `missing ${missing.join(", ")}` : "all optional tools present or disabled"}`,
