@@ -20,6 +20,8 @@ For a quick public-facing walkthrough, see [`docs/DEMO.md`](docs/DEMO.md).
 
 ## How to use it
 
+This harness targets Node.js `22.19.0` or newer.
+
 1. Install dependencies: `npm install`
 2. Run the installer: `./install.sh`
 3. Optional stronger scanning: `brew install gitleaks semgrep`

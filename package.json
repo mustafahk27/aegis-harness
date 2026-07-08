@@ -2,6 +2,9 @@
   "name": "aegis-harness",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=22.19.0"
+  },
   "scripts": {
     "sync:policy": "node ./scripts/sync-policy.mjs",
     "ci": "npm run typecheck && npm test",
