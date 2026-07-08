@@ -40,6 +40,23 @@ Try these in a target project to see the harness working:
 - Switch modes with `/mode debug`, `/mode refactor`, or `/mode review`
 - Type `/mode` with no argument to choose from a picker
 
+## What good looks like
+
+When the harness is working well, you should notice:
+
+- it asks for a plan before larger changes
+- it explains blocks with a reason and a fix path
+- it prefers tests, debugging, and small diffs over guesswork
+- it makes mode changes discoverable instead of hidden
+- it keeps policy tuning local to the repo
+
+If you want a fast smoke test, ask Pi to:
+
+1. explain `app.tsx` in a frontend project
+2. create a small feature with a test first
+3. run `/mode` and choose `debug`
+4. trigger a blocked command and then ask `/why`
+
 ## Policy config
 
 You can tune behavior per repo with `aegis-harness.config.json`.
