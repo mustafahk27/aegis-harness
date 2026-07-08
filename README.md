@@ -8,6 +8,16 @@ See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the prioritized path to make this p
 For a quick public-facing walkthrough, see [`docs/DEMO.md`](docs/DEMO.md).
 For the flow diagram and a 60-second demo transcript, see [`docs/DEMO.md`](docs/DEMO.md).
 
+## Why it stands out
+
+Aegis Harness is opinionated in the ways that matter for daily engineering work:
+
+- it pushes Pi toward senior-engineer behavior instead of generic assistance
+- it keeps safety blocks explainable instead of opaque
+- it gives teams repo-local policy tuning without editing the extension
+- it stays lightweight enough to feel useful instead of noisy
+- it gives you a clearer on-ramp with `/help`, `/status`, and `/mode`
+
 ## What it does
 
 - Adds a project-specific engineering persona to each Pi session

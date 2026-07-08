@@ -13,6 +13,16 @@ Aegis Harness makes Pi feel like a disciplined engineering partner:
 - it supports repo-specific policy tuning
 - it keeps working modes lightweight and focused
 
+## Why it stands out
+
+This harness is different from a generic assistant because it stays focused on engineering discipline:
+
+- it nudges Pi to plan before changing code
+- it keeps safety blocks readable and actionable
+- it makes mode changes easy to discover
+- it helps teams adapt policy per repo
+- it keeps the workflow short enough to use every day
+
 ```mermaid
 flowchart LR
   A["Developer task"] --> B["Pi session"]
