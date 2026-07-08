@@ -1,5 +1,7 @@
 # Aegis Harness
 
+[![CI](https://github.com/mustafahk27/aegis-harness/actions/workflows/ci.yml/badge.svg)](https://github.com/mustafahk27/aegis-harness/actions/workflows/ci.yml)
+
 Aegis Harness is my personalized coding harness for [pi](https://pi.dev). It shapes Pi to behave more like an experienced software engineer: it plans before changing code, prefers tests and debugging over guesswork, keeps diffs clean, and refuses risky or out-of-scope actions.
 
 See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the prioritized path to make this project more useful, trustworthy, and shareable.
@@ -18,6 +20,8 @@ For a quick public-facing walkthrough, see [`docs/DEMO.md`](docs/DEMO.md).
 
 ## How to use it
 
+This harness targets Node.js `22.19.0` or newer.
+
 1. Install dependencies: `npm install`
 2. Run the installer: `./install.sh`
 3. Optional stronger scanning: `brew install gitleaks semgrep`
@@ -35,6 +39,23 @@ Try these in a target project to see the harness working:
 - Trigger a block, then ask `/why` or `/explain`
 - Switch modes with `/mode debug`, `/mode refactor`, or `/mode review`
 - Type `/mode` with no argument to choose from a picker
+
+## What good looks like
+
+When the harness is working well, you should notice:
+
+- it asks for a plan before larger changes
+- it explains blocks with a reason and a fix path
+- it prefers tests, debugging, and small diffs over guesswork
+- it makes mode changes discoverable instead of hidden
+- it keeps policy tuning local to the repo
+
+If you want a fast smoke test, ask Pi to:
+
+1. explain `app.tsx` in a frontend project
+2. create a small feature with a test first
+3. run `/mode` and choose `debug`
+4. trigger a blocked command and then ask `/why`
 
 ## Policy config
 
