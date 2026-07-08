@@ -6,7 +6,7 @@ Aegis Harness is my personalized coding harness for [pi](https://pi.dev). It sha
 
 See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the prioritized path to make this project more useful, trustworthy, and shareable.
 For a quick public-facing walkthrough, see [`docs/DEMO.md`](docs/DEMO.md).
-For a 60-second demo transcript, see the end of [`docs/DEMO.md`](docs/DEMO.md).
+For the flow diagram and a 60-second demo transcript, see [`docs/DEMO.md`](docs/DEMO.md).
 
 ## What it does
 

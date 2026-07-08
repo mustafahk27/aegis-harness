@@ -13,6 +13,25 @@ Aegis Harness makes Pi feel like a disciplined engineering partner:
 - it supports repo-specific policy tuning
 - it keeps working modes lightweight and focused
 
+```mermaid
+flowchart LR
+  A["Developer task"] --> B["Pi session"]
+  B --> C["Aegis Harness policy"]
+  C --> D["Plan-first guidance"]
+  C --> E["Mode selection"]
+  C --> F["Safety gates"]
+  F --> G["Clear block reason"]
+  G --> H["/why and /explain"]
+  C --> I["Tests and checks"]
+  I --> J["Safer commit"]
+```
+
+This is the short version of how the harness changes the workflow:
+
+- it nudges the agent toward planning and tests
+- it keeps safety decisions explainable
+- it makes modes and policies easy to inspect
+
 ## 5-minute walkthrough
 
 ### 1) Start Pi in a project
