@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "sync:policy": "node ./scripts/sync-policy.mjs",
+    "ci": "npm run typecheck && npm test",
     "test": "vitest run --passWithNoTests",
     "typecheck": "tsc --noEmit"
   },
