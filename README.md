@@ -25,12 +25,14 @@ This harness targets Node.js `22.19.0` or newer.
 1. Install dependencies: `npm install`
 2. Run the installer: `./install.sh`
 3. Optional stronger scanning: `brew install gitleaks semgrep`
-4. Start `pi`, log in if needed, then reload the session with `/reload` or restart Pi
+4. Start `pi`, log in if needed, then run `/help` and `/status`
+5. Reload the session with `/reload` or restart Pi after updating the extension
 
 ## Quick checks
 
 Try these in a target project to see the harness working:
 
+- Run `/help`
 - Run `/check`
 - Ask for `/status`
 - Try `sudo ls`
