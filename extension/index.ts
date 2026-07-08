@@ -95,6 +95,22 @@ ${current.reason}
 Use this to adjust the command, file change, or commit, then try again.`;
   }
 
+  function formatCommandGuide(): string {
+    return [
+      "Aegis Harness commands:",
+      "/help — show the most useful commands and a quick smoke test",
+      "/status — show the active policy, gates, mode, and config",
+      "/mode — open the picker; /mode debug|feature|refactor|review switches directly",
+      "/modes — list the available modes and the active one",
+      "/why — explain the last block briefly",
+      "/explain — explain the last block with more detail",
+      "/gates on|off|status — control commit/secret/done gates",
+      "/check — run the project checks",
+      "/secreview — review the current diff for secret risks",
+      "Quick smoke test: run /mode, trigger a block, then ask /why.",
+    ].join("\n");
+  }
+
   function refreshStatus(ctx?: { hasUI: boolean; ui: { setStatus: (key: string, text: string) => void } }): void {
     if (ctx?.ui) {
       ctx.ui.setStatus(policy.uiKey, `${formatHarnessModeStatus(activeMode)} · gates: ${gatesEnabled ? "on" : "OFF"} · ${policy.profile}`);
@@ -286,6 +302,13 @@ Use this to adjust the command, file change, or commit, then try again.`;
     },
   });
 
+  pi.registerCommand("help", {
+    description: "Aegis Harness: show the most useful harness commands and quick checks",
+    handler: async (_args, ctx) => {
+      ctx.ui.notify(formatCommandGuide(), "info");
+    },
+  });
+
   pi.registerCommand("why", {
     description: "Aegis Harness: explain the last blocked action briefly",
     handler: async (_args, ctx) => {
@@ -400,6 +423,7 @@ Use this to adjust the command, file change, or commit, then try again.`;
         `Gates: ${gatesEnabled ? "on" : "OFF"}`,
         `Config: ${loadedPolicy.sourcePath ?? "default built-in policy"}`,
         `Security tools: ${missing.length ? `missing ${missing.join(", ")}` : "all optional tools present or disabled"}`,
+        "Quick help: use /help for the command guide and smoke test.",
       ];
       if (loadedPolicy.warnings.length) lines.push(`Warnings: ${loadedPolicy.warnings.join(" | ")}`);
       ctx.ui.notify(lines.join("\n"), loadedPolicy.warnings.length ? "warning" : "info");

@@ -222,6 +222,10 @@ describe("extension smoke tests", () => {
     expect(api._commands.has("status")).toBe(true);
   });
 
+  it("registers /help command", () => {
+    expect(api._commands.has("help")).toBe(true);
+  });
+
   it("registers /mode command", () => {
     expect(api._commands.has("mode")).toBe(true);
   });
@@ -291,6 +295,20 @@ describe("extension smoke tests", () => {
     expect(ctx.notifications[0].msg).toMatch(/Mode detail:/i);
     expect(ctx.notifications[0].msg).toMatch(/Config:/i);
     expect(ctx.notifications[0].msg).toMatch(/Gates:/i);
+    expect(ctx.notifications[0].msg).toMatch(/Quick help:/i);
+  });
+
+  it("reports /help with the command guide", async () => {
+    const ctx = {
+      ...makeCtx(),
+      waitForIdle: async () => {},
+    };
+    await api._commands.get("help")!.handler("", ctx as never);
+
+    expect(ctx.notifications[0].msg).toMatch(/Aegis Harness commands:/i);
+    expect(ctx.notifications[0].msg).toMatch(/\/help/i);
+    expect(ctx.notifications[0].msg).toMatch(/\/status/i);
+    expect(ctx.notifications[0].msg).toMatch(/Quick smoke test/i);
   });
 
   it("reports /modes with the active mode and available options", async () => {
