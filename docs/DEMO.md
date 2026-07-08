@@ -123,3 +123,26 @@ sudo ls
 ```
 
 That sequence shows the full value proposition in under a minute.
+
+## 60-second transcript
+
+Here is a compact transcript you can reuse in a demo or screenshot:
+
+```text
+You: /status
+Pi: Policy, mode, gates, and config appear in one readable snapshot.
+
+You: /mode
+Pi: The mode picker appears with feature, debug, refactor, and review.
+
+You: sudo ls
+Pi: Blocked — why it was blocked and how to fix it are shown clearly.
+
+You: /why
+Pi: A short explanation of the last block.
+
+You: /explain
+Pi: A fuller explanation with the fix path.
+```
+
+It’s short, repeatable, and easy for a viewer to understand quickly.
