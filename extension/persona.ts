@@ -2,6 +2,8 @@ import { defaultHarnessMode, formatHarnessModePrompt, type HarnessModeName } fro
 
 /** Engineering-discipline rules appended to pi's system prompt each turn. */
 export function personaPrompt(mode: HarnessModeName = defaultHarnessMode()): string {
+  const modeBlock = mode === defaultHarnessMode() ? "" : `\n\n${formatHarnessModePrompt(mode)}`;
+
   return `
 ## Engineering discipline (Aegis Harness)
 
@@ -29,6 +31,6 @@ You are working as an experienced software engineer. Non-negotiable rules:
 - Treat new dependencies with suspicion: prefer well-known packages, exact known versions.
 - Before declaring a task done, re-read your diff specifically hunting for injection, traversal, SSRF, and data-exposure bugs. Use the security-review skill for significant changes.
 
-${formatHarnessModePrompt(mode)}
+${modeBlock}
 `.trim();
 }
