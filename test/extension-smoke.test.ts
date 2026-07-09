@@ -401,6 +401,7 @@ describe("extension smoke tests", () => {
 
     expect(whyCtx.notifications[0].msg).toMatch(/Last block/i);
     expect(whyCtx.notifications[0].msg).toMatch(/Secret preview/i);
+    expect(whyCtx.notifications[0].msg).toMatch(/Fix:/i);
     expect(explainCtx.notifications[0].msg).toMatch(/Why:/i);
     expect(explainCtx.notifications[0].msg).toMatch(/Fix:/i);
     expect(explainCtx.notifications[0].msg).toMatch(/AKIAIOSFODNN7EXAMPLE/i);

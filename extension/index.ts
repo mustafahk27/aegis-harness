@@ -87,12 +87,12 @@ export default function (pi: ExtensionAPI) {
     }
 
     if (mode === "why") {
-      return `Last block (${current.kind}): ${current.preview}`;
+      return [`Last block (${current.kind}): ${current.preview}`, `Fix: ${current.fix}`].join("\n");
     }
 
     return `Last block (${current.kind}):
 ${current.reason}
-Use this to adjust the command, file change, or commit, then try again.`;
+Next step: adjust the command, file change, or commit using the fix above, then try again.`;
   }
 
   function formatCommandGuide(): string {
