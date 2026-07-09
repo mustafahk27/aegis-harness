@@ -407,6 +407,28 @@ describe("extension smoke tests", () => {
     expect(explainCtx.notifications[0].msg).toMatch(/AKIAIOSFODNN7EXAMPLE/i);
   });
 
+  it("/why and /explain report dangerous command blocks", async () => {
+    const whyCtx = makeCtx();
+    const explainCtx = makeCtx();
+
+    await api._trigger("tool_call", {
+      type: "tool_call",
+      toolCallId: "tc-why-danger-1",
+      toolName: "bash",
+      input: { command: "sudo ls" },
+    });
+
+    await api._commands.get("why")!.handler("", whyCtx as never);
+    await api._commands.get("explain")!.handler("", explainCtx as never);
+
+    expect(whyCtx.notifications[0].msg).toMatch(/dangerous-command/i);
+    expect(whyCtx.notifications[0].msg).toMatch(/Fix:/i);
+    expect(whyCtx.notifications[0].msg).toMatch(/sudo/i);
+    expect(explainCtx.notifications[0].msg).toMatch(/dangerous-command/i);
+    expect(explainCtx.notifications[0].msg).toMatch(/Fix:/i);
+    expect(explainCtx.notifications[0].msg).toMatch(/sudo/i);
+  });
+
   it("/why says when no block has happened yet", async () => {
     const whyCtx = makeCtx();
     await api._commands.get("why")!.handler("", whyCtx as never);
