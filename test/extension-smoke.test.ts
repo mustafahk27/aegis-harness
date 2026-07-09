@@ -457,6 +457,6 @@ describe("extension smoke tests", () => {
 
     expect(result?.systemPrompt).toMatch(/^BASE\n\n/);
     expect(result?.systemPrompt).toMatch(/Engineering discipline/i);
-    expect(result?.systemPrompt).toMatch(/Feature mode/i);
+    expect(result?.systemPrompt).not.toMatch(/Feature mode/i);
   });
 });

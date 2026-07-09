@@ -18,7 +18,7 @@ describe("personaPrompt", () => {
   it("includes the active working mode guidance", () => {
     const prompt = personaPrompt("debug");
     expect(prompt).toContain(formatHarnessModePrompt("debug"));
-    expect(personaPrompt(defaultHarnessMode())).toContain(formatHarnessModePrompt("feature"));
+    expect(personaPrompt(defaultHarnessMode())).not.toContain(formatHarnessModePrompt("feature"));
   });
 
   it("keeps the mode add-on compact", () => {
