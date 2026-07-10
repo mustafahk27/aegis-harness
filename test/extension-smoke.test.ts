@@ -5,6 +5,9 @@
  * instead of running pi interactively. This validates gate wiring without
  * requiring live LLM auth.
  */
+import { mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, it, expect, beforeEach } from "vitest";
 
 // ── minimal ExtensionAPI mock ─────────────────────────────────────────────────
@@ -125,6 +128,56 @@ describe("extension smoke tests", () => {
     const ctx = makeCtx("/tmp/aegis-harness-smoke", true);
     await api._trigger("session_start", { type: "session_start", reason: "startup" }, ctx);
     expect(ctx.statuses[0].text).toMatch(/balanced/i);
+  });
+
+  it("reloads repo-local policy and clears block history on session_start", async () => {
+    const cwd = mkdtempSync(join(tmpdir(), "aegis-harness-smoke-"));
+    const ctx = makeCtx(cwd, true);
+
+    writeFileSync(
+      join(cwd, "aegis-harness.config.json"),
+      JSON.stringify({
+        profile: "light",
+        displayName: "Custom Harness",
+        uiKey: "custom-harness",
+        defaultMode: "debug",
+        gatesEnabledByDefault: false,
+      }),
+    );
+
+    await api._trigger("session_start", { type: "session_start", reason: "startup" }, ctx);
+    expect(ctx.statuses.at(-1)?.text).toMatch(/mode: debug/i);
+    expect(ctx.statuses.at(-1)?.text).toMatch(/gates: OFF/i);
+    expect(ctx.statuses.at(-1)?.text).toMatch(/light/i);
+
+    await api._trigger("tool_call", {
+      type: "tool_call",
+      toolCallId: "tc-reload-1",
+      toolName: "bash",
+      input: { command: "sudo ls" },
+    });
+
+    await api._commands.get("why")!.handler("", ctx as never);
+    expect(ctx.notifications.at(-1)?.msg).toMatch(/Last block/i);
+
+    writeFileSync(
+      join(cwd, "aegis-harness.config.json"),
+      JSON.stringify({
+        profile: "strict",
+        displayName: "Custom Harness",
+        uiKey: "custom-harness",
+        defaultMode: "review",
+        gatesEnabledByDefault: true,
+      }),
+    );
+
+    await api._trigger("session_start", { type: "session_start", reason: "reload" }, ctx);
+    expect(ctx.statuses.at(-1)?.text).toMatch(/mode: review/i);
+    expect(ctx.statuses.at(-1)?.text).toMatch(/gates: on/i);
+    expect(ctx.statuses.at(-1)?.text).toMatch(/strict/i);
+
+    await api._commands.get("why")!.handler("", ctx as never);
+    expect(ctx.notifications.at(-1)?.msg).toMatch(/No recent block/i);
   });
 
   // ── dangerous-command gate ────────────────────────────────────────────────
