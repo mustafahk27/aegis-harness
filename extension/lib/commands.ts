@@ -37,15 +37,15 @@ function gitSubcommand(argv: string[]): { subcommand: string | null; args: strin
   return { subcommand: null, args: [] };
 }
 
-function includesProtectedBranch(args: string[], protectedBranches: string[]): boolean {
-  return args.some((arg) => protectedBranches.includes(arg));
-}
-
 function previewCommand(command: string): string {
   return command.length > 120 ? `${command.slice(0, 117)}...` : command;
 }
 
-function recursiveRmDetails(argv: string[]): Pick<CommandBlockDetails, "why" | "fix"> | null {
+function commandPreview(argv: string[]): string {
+  return argv.join(" ");
+}
+
+function recursiveRmDetails(argv: string[]): Pick<CommandBlockDetails, "why" | "fix" | "details"> | null {
   if (commandWord(argv[0] ?? "") !== "rm") return null;
   let recursive = false;
   const targets: string[] = [];
@@ -67,6 +67,7 @@ function recursiveRmDetails(argv: string[]): Pick<CommandBlockDetails, "why" | "
       return {
         why: `recursive deletes on '${target}' are easy to mis-target and hard to recover from.`,
         fix: "use a relative path inside the project, for example `rm -rf ./dist`.",
+        details: [`Risky segment: ${commandPreview(argv)}`, `Protected target: ${target}`],
       };
     }
   }
@@ -84,6 +85,7 @@ export function describeDangerousCommand(command: string, policy: AegisPolicy = 
         preview: previewCommand(command),
         why: "the command uses elevated privileges outside the project boundary.",
         fix: "run the privileged part manually, or narrow the command to the smallest safe scope.",
+        details: [`Risky segment: ${commandPreview(segment.argv)}`],
       };
     }
 
@@ -92,6 +94,7 @@ export function describeDangerousCommand(command: string, policy: AegisPolicy = 
         preview: previewCommand(command),
         why: `pipe-to-shell runs unreviewed code immediately with no inspection point.`,
         fix: "download it first, inspect it, then execute it explicitly.",
+        details: [`Risky segment: ${commandPreview(segment.argv)}`, `Pipeline: ${previewCommand(command)}`],
       };
     }
 
@@ -102,6 +105,7 @@ export function describeDangerousCommand(command: string, policy: AegisPolicy = 
           preview: previewCommand(command),
           why: reason.why,
           fix: reason.fix,
+          details: reason.details,
         };
       }
     }
@@ -110,11 +114,13 @@ export function describeDangerousCommand(command: string, policy: AegisPolicy = 
       const { subcommand, args } = gitSubcommand(segment.argv);
       if (subcommand === "push" && policy.dangerousCommands.blockedBranches.length > 0) {
         const hasForce = args.includes("--force") || args.includes("-f");
-        if (hasForce && includesProtectedBranch(args, policy.dangerousCommands.blockedBranches)) {
+        const protectedBranch = args.find((arg) => policy.dangerousCommands.blockedBranches.includes(arg));
+        if (hasForce && protectedBranch) {
           return {
             preview: previewCommand(command),
             why: `force-pushing to protected branches rewrites shared history and can drop other people's work.`,
             fix: "push to a feature branch, or use --force-with-lease only when you control the branch.",
+            details: [`Risky segment: ${commandPreview(segment.argv)}`, `Protected branch: ${protectedBranch}`],
           };
         }
       }
@@ -125,6 +131,7 @@ export function describeDangerousCommand(command: string, policy: AegisPolicy = 
         preview: previewCommand(command),
         why: "the command makes files world-writable.",
         fix: "use the least-privilege mode the task needs, such as 750 or 640.",
+        details: [`Risky segment: ${commandPreview(segment.argv)}`],
       };
     }
   }

@@ -87,7 +87,7 @@ export default function (pi: ExtensionAPI) {
     }
 
     if (mode === "why") {
-      return [`Last block (${current.kind}): ${current.preview}`, `Fix: ${current.fix}`].join("\n");
+      return [`Last block (${current.kind}): ${current.preview}`, ...current.details, `Fix: ${current.fix}`].join("\n");
     }
 
     return `Last block (${current.kind}):
