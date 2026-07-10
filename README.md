@@ -1,6 +1,22 @@
 # Aegis Harness
 
+[![CI](https://github.com/mustafahk27/aegis-harness/actions/workflows/ci.yml/badge.svg)](https://github.com/mustafahk27/aegis-harness/actions/workflows/ci.yml)
+
 Aegis Harness is my personalized coding harness for [pi](https://pi.dev). It shapes Pi to behave more like an experienced software engineer: it plans before changing code, prefers tests and debugging over guesswork, keeps diffs clean, and refuses risky or out-of-scope actions.
+
+See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the prioritized path to make this project more useful, trustworthy, and shareable.
+For a quick public-facing walkthrough, see [`docs/DEMO.md`](docs/DEMO.md).
+For the flow diagram and a 60-second demo transcript, see [`docs/DEMO.md`](docs/DEMO.md).
+
+## Why it stands out
+
+Aegis Harness is opinionated in the ways that matter for daily engineering work:
+
+- it pushes Pi toward senior-engineer behavior instead of generic assistance
+- it keeps safety blocks explainable instead of opaque
+- it gives teams repo-local policy tuning without editing the extension
+- it stays lightweight enough to feel useful instead of noisy
+- it gives you a clearer on-ramp with `/help`, `/status`, and `/mode`
 
 ## What it does
 
@@ -15,15 +31,19 @@ Aegis Harness is my personalized coding harness for [pi](https://pi.dev). It sha
 
 ## How to use it
 
+This harness targets Node.js `22.19.0` or newer.
+
 1. Install dependencies: `npm install`
 2. Run the installer: `./install.sh`
 3. Optional stronger scanning: `brew install gitleaks semgrep`
-4. Start `pi`, log in if needed, then reload the session with `/reload` or restart Pi
+4. Start `pi`, log in if needed, then run `/help` and `/status`
+5. Reload the session with `/reload` or restart Pi after updating the extension
 
 ## Quick checks
 
 Try these in a target project to see the harness working:
 
+- Run `/help`
 - Run `/check`
 - Ask for `/status`
 - Try `sudo ls`
@@ -32,6 +52,23 @@ Try these in a target project to see the harness working:
 - Trigger a block, then ask `/why` or `/explain`
 - Switch modes with `/mode debug`, `/mode refactor`, or `/mode review`
 - Type `/mode` with no argument to choose from a picker
+
+## What good looks like
+
+When the harness is working well, you should notice:
+
+- it asks for a plan before larger changes
+- it explains blocks with a reason and a fix path
+- it prefers tests, debugging, and small diffs over guesswork
+- it makes mode changes discoverable instead of hidden
+- it keeps policy tuning local to the repo
+
+If you want a fast smoke test, ask Pi to:
+
+1. explain `app.tsx` in a frontend project
+2. create a small feature with a test first
+3. run `/mode` and choose `debug`
+4. trigger a blocked command and then ask `/why`
 
 ## Policy config
 

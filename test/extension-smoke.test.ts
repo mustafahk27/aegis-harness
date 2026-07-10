@@ -275,8 +275,16 @@ describe("extension smoke tests", () => {
     expect(api._commands.has("status")).toBe(true);
   });
 
+  it("registers /help command", () => {
+    expect(api._commands.has("help")).toBe(true);
+  });
+
   it("registers /mode command", () => {
     expect(api._commands.has("mode")).toBe(true);
+  });
+
+  it("registers /modes command", () => {
+    expect(api._commands.has("modes")).toBe(true);
   });
 
   // ── /gates command ────────────────────────────────────────────────────────
@@ -337,8 +345,38 @@ describe("extension smoke tests", () => {
 
     expect(ctx.notifications[0].msg).toMatch(/Policy:/i);
     expect(ctx.notifications[0].msg).toMatch(/Mode:/i);
+    expect(ctx.notifications[0].msg).toMatch(/Mode detail:/i);
     expect(ctx.notifications[0].msg).toMatch(/Config:/i);
     expect(ctx.notifications[0].msg).toMatch(/Gates:/i);
+    expect(ctx.notifications[0].msg).toMatch(/Quick help:/i);
+  });
+
+  it("reports /help with the command guide", async () => {
+    const ctx = {
+      ...makeCtx(),
+      waitForIdle: async () => {},
+    };
+    await api._commands.get("help")!.handler("", ctx as never);
+
+    expect(ctx.notifications[0].msg).toMatch(/Aegis Harness commands:/i);
+    expect(ctx.notifications[0].msg).toMatch(/\/help/i);
+    expect(ctx.notifications[0].msg).toMatch(/\/status/i);
+    expect(ctx.notifications[0].msg).toMatch(/Quick smoke test/i);
+  });
+
+  it("reports /modes with the active mode and available options", async () => {
+    const ctx = {
+      ...makeCtx(),
+      waitForIdle: async () => {},
+    };
+    await api._commands.get("modes")!.handler("", ctx as never);
+
+    expect(ctx.notifications[0].msg).toMatch(/Active mode:/i);
+    expect(ctx.notifications[0].msg).toMatch(/Mode detail:/i);
+    expect(ctx.notifications[0].msg).toMatch(/feature:/i);
+    expect(ctx.notifications[0].msg).toMatch(/debug:/i);
+    expect(ctx.notifications[0].msg).toMatch(/refactor:/i);
+    expect(ctx.notifications[0].msg).toMatch(/review:/i);
   });
 
   it("switches modes and reflects the new mode in the prompt", async () => {
@@ -379,6 +417,21 @@ describe("extension smoke tests", () => {
     expect(ctx.statuses.at(-1)?.text).toMatch(/mode: review/i);
   });
 
+  it("session_start restores the default mode and gates", async () => {
+    const ctx = makeCtx("/tmp/aegis-harness-smoke", true);
+    const commandCtx = { ...ctx, waitForIdle: async () => {} };
+    const modeCmd = api._commands.get("mode")!;
+    const gatesCmd = api._commands.get("gates")!;
+
+    await modeCmd.handler("debug", commandCtx as never);
+    await gatesCmd.handler("off", commandCtx as never);
+
+    await api._trigger("session_start", { type: "session_start", reason: "reload" }, ctx);
+
+    expect(ctx.statuses.at(-1)?.text).toMatch(/mode: feature/i);
+    expect(ctx.statuses.at(-1)?.text).toMatch(/gates: on/i);
+  });
+
   it("/why and /explain report the last blocked action", async () => {
     const whyCtx = makeCtx();
     const explainCtx = makeCtx();
@@ -401,6 +454,7 @@ describe("extension smoke tests", () => {
 
     expect(whyCtx.notifications[0].msg).toMatch(/Last block/i);
     expect(whyCtx.notifications[0].msg).toMatch(/Secret preview/i);
+    expect(whyCtx.notifications[0].msg).toMatch(/Fix:/i);
     expect(explainCtx.notifications[0].msg).toMatch(/Why:/i);
     expect(explainCtx.notifications[0].msg).toMatch(/Fix:/i);
     expect(explainCtx.notifications[0].msg).toMatch(/AKIAIOSFODNN7EXAMPLE/i);
@@ -425,6 +479,11 @@ describe("extension smoke tests", () => {
     expect(whyCtx.notifications[0].msg).toMatch(/sudo ls/i);
     expect(explainCtx.notifications[0].msg).toMatch(/Risky segment:/i);
     expect(explainCtx.notifications[0].msg).toMatch(/sudo ls/i);
+    expect(whyCtx.notifications[0].msg).toMatch(/Fix:/i);
+    expect(whyCtx.notifications[0].msg).toMatch(/sudo/i);
+    expect(explainCtx.notifications[0].msg).toMatch(/dangerous-command/i);
+    expect(explainCtx.notifications[0].msg).toMatch(/Fix:/i);
+    expect(explainCtx.notifications[0].msg).toMatch(/sudo/i);
   });
 
   it("/why says when no block has happened yet", async () => {
