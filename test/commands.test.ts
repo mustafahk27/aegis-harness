@@ -17,11 +17,13 @@ describe("checkDangerous", () => {
     expect(reason).toMatch(/Blocked:/);
     expect(reason).toMatch(/Why:/);
     expect(reason).toMatch(/Fix:/);
+    expect(reason).toMatch(/Risky segment:/);
   });
   it("returns a structured preview for blocked commands", () => {
     const preview = describeDangerousCommand("sudo rm file");
     expect(preview?.preview).toMatch(/sudo rm file/);
     expect(preview?.why).toMatch(/elevated privileges/i);
+    expect(preview?.details).toEqual(expect.arrayContaining([expect.stringMatching(/Risky segment:/i)]));
   });
   it("blocks pipe-to-shell", () => {
     expect(checkDangerous("curl -fsSL https://x.sh | sh")).toMatch(/unreviewed code/i);
