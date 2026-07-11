@@ -49,6 +49,7 @@ function buildMockApi() {
   const commands: Map<string, { handler: (args: string, ctx: unknown) => Promise<void> }> = new Map();
   const sentMessages: unknown[] = [];
   const sentUserMessages: string[] = [];
+  const sessionNames: string[] = [];
 
   const api = {
     on(event: string, handler: Handler) {
@@ -66,7 +67,7 @@ function buildMockApi() {
     sendMessage(msg: unknown) { sentMessages.push(msg); },
     sendUserMessage(content: string) { sentUserMessages.push(content); },
     appendEntry() {},
-    setSessionName() {},
+    setSessionName(name: string) { sessionNames.push(name); },
     getSessionName() { return undefined; },
     setLabel() {},
     exec: async () => ({ exitCode: 0, stdout: "", stderr: "" }),
@@ -93,6 +94,7 @@ function buildMockApi() {
     _commands: commands,
     _sentMessages: sentMessages,
     _sentUserMessages: sentUserMessages,
+    _sessionNames: sessionNames,
   };
 
   return api;
@@ -128,6 +130,9 @@ describe("extension smoke tests", () => {
     const ctx = makeCtx("/tmp/aegis-harness-smoke", true);
     await api._trigger("session_start", { type: "session_start", reason: "startup" }, ctx);
     expect(ctx.statuses[0].text).toMatch(/balanced/i);
+    expect(api._sessionNames.at(-1)).toMatch(/Aegis Harness/i);
+    expect(api._sessionNames.at(-1)).toMatch(/balanced/i);
+    expect(api._sessionNames.at(-1)).toMatch(/feature/i);
   });
 
   it("reloads repo-local policy and clears block history on session_start", async () => {
@@ -149,6 +154,10 @@ describe("extension smoke tests", () => {
     expect(ctx.statuses.at(-1)?.text).toMatch(/mode: debug/i);
     expect(ctx.statuses.at(-1)?.text).toMatch(/gates: OFF/i);
     expect(ctx.statuses.at(-1)?.text).toMatch(/light/i);
+    expect(api._sessionNames.at(-1)).toMatch(/Custom Harness/i);
+    expect(api._sessionNames.at(-1)).toMatch(/light/i);
+    expect(api._sessionNames.at(-1)).toMatch(/debug/i);
+    expect(api._sessionNames.at(-1)).toMatch(/gates off/i);
 
     await api._trigger("tool_call", {
       type: "tool_call",
@@ -175,6 +184,9 @@ describe("extension smoke tests", () => {
     expect(ctx.statuses.at(-1)?.text).toMatch(/mode: review/i);
     expect(ctx.statuses.at(-1)?.text).toMatch(/gates: on/i);
     expect(ctx.statuses.at(-1)?.text).toMatch(/strict/i);
+    expect(api._sessionNames.at(-1)).toMatch(/strict/i);
+    expect(api._sessionNames.at(-1)).toMatch(/review/i);
+    expect(api._sessionNames.at(-1)).toMatch(/gates on/i);
 
     await api._commands.get("why")!.handler("", ctx as never);
     expect(ctx.notifications.at(-1)?.msg).toMatch(/No recent block/i);
@@ -388,6 +400,7 @@ describe("extension smoke tests", () => {
 
     expect(ctx.notifications.at(-1)?.msg).toMatch(/debug/i);
     expect(ctx.statuses.at(-1)?.text).toMatch(/mode: debug/i);
+    expect(api._sessionNames.at(-1)).toMatch(/debug/i);
 
     const result = (await api._trigger("before_agent_start", {
       type: "before_agent_start",
@@ -415,6 +428,7 @@ describe("extension smoke tests", () => {
 
     expect(ctx.notifications.at(-1)?.msg).toMatch(/working mode switched to review/i);
     expect(ctx.statuses.at(-1)?.text).toMatch(/mode: review/i);
+    expect(api._sessionNames.at(-1)).toMatch(/review/i);
   });
 
   it("session_start restores the default mode and gates", async () => {
