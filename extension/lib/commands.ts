@@ -84,7 +84,7 @@ export function describeDangerousCommand(command: string, policy: AegisPolicy = 
       return {
         preview: previewCommand(command),
         why: "the command uses elevated privileges outside the project boundary.",
-        fix: "run the privileged part manually, or narrow the command to the smallest safe scope.",
+        fix: "drop `sudo` if possible; if you only need to inspect or edit a project file, rerun the command against the smallest project-local path instead.",
         details: [`Risky segment: ${commandPreview(segment.argv)}`],
       };
     }
@@ -93,7 +93,7 @@ export function describeDangerousCommand(command: string, policy: AegisPolicy = 
       return {
         preview: previewCommand(command),
         why: `pipe-to-shell runs unreviewed code immediately with no inspection point.`,
-        fix: "download it first, inspect it, then execute it explicitly.",
+        fix: "save the script to a file first, inspect it, and only run it explicitly after you trust the contents.",
         details: [`Risky segment: ${commandPreview(segment.argv)}`, `Pipeline: ${previewCommand(command)}`],
       };
     }
@@ -119,7 +119,7 @@ export function describeDangerousCommand(command: string, policy: AegisPolicy = 
           return {
             preview: previewCommand(command),
             why: `force-pushing to protected branches rewrites shared history and can drop other people's work.`,
-            fix: "push to a feature branch, or use --force-with-lease only when you control the branch.",
+            fix: `push to a feature branch instead, or use \`git push --force-with-lease origin ${protectedBranch}\` only when you own the branch and need a controlled history update.`,
             details: [`Risky segment: ${commandPreview(segment.argv)}`, `Protected branch: ${protectedBranch}`],
           };
         }
@@ -130,7 +130,7 @@ export function describeDangerousCommand(command: string, policy: AegisPolicy = 
       return {
         preview: previewCommand(command),
         why: "the command makes files world-writable.",
-        fix: "use the least-privilege mode the task needs, such as 750 or 640.",
+        fix: "use the least-privilege mode the task needs, such as `chmod 750 ./dir` for executables or `chmod 640 ./file` for files.",
         details: [`Risky segment: ${commandPreview(segment.argv)}`],
       };
     }

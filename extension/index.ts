@@ -117,6 +117,14 @@ Next step: adjust the command, file change, or commit using the fix above, then 
     }
   }
 
+  function formatSessionName(): string {
+    return `${policy.displayName} · ${policy.profile} · ${activeMode} · gates ${gatesEnabled ? "on" : "off"}`;
+  }
+
+  async function refreshSessionName(): Promise<void> {
+    await pi.setSessionName(formatSessionName());
+  }
+
   // --- persona ---------------------------------------------------------
   pi.on("before_agent_start", async (event) => {
     return { systemPrompt: `${event.systemPrompt}\n\n${personaPrompt(activeMode)}` };
@@ -143,6 +151,7 @@ Next step: adjust the command, file change, or commit using the fix above, then 
       if (ctx.hasUI) ctx.ui.notify(`${policy.displayName} policy warning: ${warning}`, "warning");
     }
     refreshStatus(ctx);
+    await refreshSessionName();
   });
 
   // --- re-arm the done gate on real user input -------------------------
@@ -360,6 +369,7 @@ Next step: adjust the command, file change, or commit using the fix above, then 
           const picked = parseHarnessMode(selection.split(" — ")[0]);
           if (picked) {
             activeMode = picked;
+            await refreshSessionName();
             ctx.ui.notify(`Working mode switched to ${activeMode}.`, "info");
             refreshStatus(ctx);
             return;
@@ -389,6 +399,7 @@ Next step: adjust the command, file change, or commit using the fix above, then 
 
       activeMode = nextMode;
       refreshStatus(ctx);
+      await refreshSessionName();
       ctx.ui.notify(`Working mode switched to ${activeMode}.`, "info");
     },
   });
@@ -400,6 +411,7 @@ Next step: adjust the command, file change, or commit using the fix above, then 
       if (arg === "on") gatesEnabled = true;
       else if (arg === "off") gatesEnabled = false;
       refreshStatus(ctx);
+      await refreshSessionName();
       ctx.ui.notify(
         `${policy.displayName} (${policy.profile}, ${activeMode} mode) gates ${gatesEnabled ? "ON" : "OFF — commit/secret/done gates disabled until /gates on or session restart"}`,
         gatesEnabled ? "info" : "warning",
@@ -428,6 +440,7 @@ Next step: adjust the command, file change, or commit using the fix above, then 
       if (loadedPolicy.warnings.length) lines.push(`Warnings: ${loadedPolicy.warnings.join(" | ")}`);
       ctx.ui.notify(lines.join("\n"), loadedPolicy.warnings.length ? "warning" : "info");
       refreshStatus(ctx);
+      await refreshSessionName();
     },
   });
 }
