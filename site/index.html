@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Aegis Harness — A disciplined way to let Pi touch your code</title>
+<meta name="description" content="Aegis Harness is a personal coding harness for Pi. It plans before changing code, prefers tests and debugging over guesswork, keeps diffs clean, and refuses risky actions.">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --accent: #c9704a;
+    --space-hero-top: 76px;
+    --space-hero-bottom: 64px;
+    --bg: #f6f5f1;
+    --ink: #1b1d1e;
+    --ink-soft: #4a4843;
+    --ink-mute: #63615a;
+    --ink-faint: #8a877d;
+    --line: #dcdad2;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Sora', sans-serif;
+  }
+
+  ::selection { background: var(--accent); color: var(--bg); }
+
+  a { color: inherit; }
+
+  .mono { font-family: 'IBM Plex Mono', ui-monospace, monospace; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .wrap { max-width: 1180px; margin: 0 auto; padding-left: 44px; padding-right: 44px; }
+
+  /* NAV */
+  nav.site-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 22px 44px;
+    border-bottom: 1px solid var(--line);
+    position: sticky;
+    top: 0;
+    background: rgba(246, 245, 241, 0.9);
+    backdrop-filter: blur(8px);
+    z-index: 10;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand-mark {
+    width: 26px; height: 26px; border-radius: 6px;
+    background: var(--ink); color: var(--bg);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 13px;
+  }
+  .brand-name { font-weight: 700; font-size: 15px; letter-spacing: -0.01em; }
+  .nav-links { display: flex; align-items: center; gap: 30px; font-size: 13px; font-weight: 500; color: var(--ink-mute); }
+  .nav-links a { text-decoration: none; color: var(--ink-mute); transition: color 0.15s ease; }
+  .nav-links a:hover { color: var(--ink); }
+  .nav-cta {
+    color: var(--ink) !important;
+    font-weight: 600 !important;
+    padding: 8px 16px;
+    border: 1px solid var(--ink);
+    border-radius: 6px;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  .nav-cta:hover { background: var(--ink); color: var(--bg) !important; }
+
+  /* HERO */
+  .hero {
+    padding: var(--space-hero-top) 44px var(--space-hero-bottom);
+    display: grid;
+    grid-template-columns: 1.3fr 1fr;
+    gap: 44px;
+    align-items: start;
+  }
+  .hero-copy { animation: fadeUp 0.5s ease both; }
+  .eyebrow {
+    font-size: 12px; color: var(--accent);
+    letter-spacing: 0.1em; text-transform: uppercase;
+    margin-bottom: 18px;
+  }
+  h1 {
+    font-size: clamp(38px, 4.6vw, 58px);
+    font-weight: 700;
+    line-height: 1.03;
+    letter-spacing: -0.02em;
+    margin: 0 0 22px;
+  }
+  .hero-copy p {
+    font-size: 16px; line-height: 1.7; color: var(--ink-soft);
+    max-width: 48ch; margin: 0 0 30px;
+  }
+  .hero-actions { display: flex; gap: 14px; flex-wrap: wrap; }
+  .btn {
+    text-decoration: none;
+    font-weight: 600; font-size: 14px;
+    padding: 13px 24px; border-radius: 6px;
+    display: inline-block;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  .btn-primary { background: var(--ink); color: var(--bg); }
+  .btn-primary:hover { background: var(--accent); }
+  .btn-secondary { border: 1px solid var(--ink); color: var(--ink); }
+  .btn-secondary:hover { background: var(--ink); color: var(--bg); }
+
+  .terminal {
+    background: var(--ink); color: #e8e6df;
+    border-radius: 10px; padding: 22px;
+    font-size: 12.5px; line-height: 1.9;
+    align-self: start;
+    animation: fadeUp 0.5s ease 0.1s both;
+  }
+  .terminal .dim { color: #9a988f; }
+  .terminal .bad { color: #ff9b7a; }
+  .terminal .good { color: #8fe3b0; }
+  .terminal .indent { padding-left: 14px; margin-bottom: 10px; }
+
+  /* SECTIONS */
+  section.block { padding: 56px 44px; border-top: 1px solid var(--line); }
+  .section-heading {
+    font-size: 12.5px; font-weight: 700; color: var(--accent);
+    text-transform: uppercase; letter-spacing: 0.12em;
+    margin: 0 0 26px;
+  }
+
+  .behaviors-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+  .behavior-title { font-weight: 700; font-size: 15px; margin-bottom: 6px; }
+  .behavior-desc { font-size: 13.5px; color: var(--ink-mute); line-height: 1.6; }
+
+  .install-list {
+    font-size: 13.5px;
+    display: flex; flex-direction: column; gap: 1px;
+    border-radius: 8px; overflow: hidden;
+    border: 1px solid var(--line);
+    max-width: 640px;
+  }
+  .install-step {
+    display: flex; align-items: center; gap: 16px;
+    padding: 13px 18px;
+  }
+  .install-step:nth-child(odd) { background: #ffffff; }
+  .install-step:nth-child(even) { background: #fbfaf7; }
+  .install-prompt { color: #9a988f; flex: none; }
+  .install-cmd { flex: 1; min-width: 0; overflow-x: auto; white-space: pre; }
+  .install-label { color: #9a988f; flex: none; font-size: 11px; }
+  .copy-btn {
+    flex: none; background: none; border: none;
+    color: var(--accent); font-size: 11px; cursor: pointer;
+    opacity: 0.75; font-family: inherit; padding: 0;
+    transition: opacity 0.15s ease;
+  }
+  .copy-btn:hover { opacity: 1; }
+  .install-note { font-size: 12.5px; color: var(--ink-faint); margin: 18px 0 0; }
+
+  .closing-inner {
+    border-top: 1px solid var(--line); padding-top: 28px;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 16px;
+  }
+  .closing-title { font-size: 15px; font-weight: 600; }
+  .closing-cta {
+    text-decoration: none; color: var(--bg); background: var(--ink);
+    padding: 11px 22px; border-radius: 6px; font-size: 13.5px; font-weight: 600;
+    transition: background 0.15s ease;
+  }
+  .closing-cta:hover { background: var(--accent); }
+
+  footer.site-footer { border-top: 1px solid var(--line); padding: 26px 44px; }
+  .footer-inner {
+    max-width: 1180px; margin: 0 auto;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 14px;
+  }
+  .footer-note { font-size: 12.5px; color: var(--ink-faint); }
+  .footer-links { display: flex; gap: 20px; }
+  .footer-links a { color: var(--ink-faint); text-decoration: none; font-size: 12.5px; transition: color 0.15s ease; }
+  .footer-links a:hover { color: var(--ink); }
+
+  @media (max-width: 860px) {
+    .wrap, nav.site-nav, .hero, section.block, footer.site-footer { padding-left: 24px; padding-right: 24px; }
+    .hero { grid-template-columns: 1fr; }
+    .behaviors-grid { grid-template-columns: 1fr; }
+    .nav-links { gap: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="site-nav">
+  <div class="brand">
+    <div class="brand-mark">Æ</div>
+    <span class="brand-name">Aegis Harness</span>
+  </div>
+  <div class="nav-links">
+    <a href="#behaviors">Behaviors</a>
+    <a href="#install">Install</a>
+    <a href="https://github.com/mustafahk27/aegis-harness/blob/main/docs/DEMO.md" target="_blank" rel="noopener">Docs</a>
+    <a class="nav-cta" href="https://github.com/mustafahk27/aegis-harness" target="_blank" rel="noopener">GitHub</a>
+  </div>
+</nav>
+
+<section class="hero wrap">
+  <div class="hero-copy">
+    <div class="eyebrow mono">A coding harness for Pi</div>
+    <h1>A disciplined way to let Pi touch your code.</h1>
+    <p>It plans before changing code, prefers tests and debugging over guesswork, keeps diffs clean, and refuses risky actions.</p>
+    <div class="hero-actions">
+      <a href="#install" class="btn btn-primary">npm install</a>
+      <a href="#behaviors" class="btn btn-secondary">See behaviors</a>
+    </div>
+  </div>
+  <div class="terminal mono">
+    <div class="dim">&gt; sudo rm -rf node_modules/.cache</div>
+    <div class="bad">✕ blocked — recursive delete outside scratch paths</div>
+    <div class="dim indent">fix: run /why for the full reason</div>
+    <div class="dim">&gt; /mode debug</div>
+    <div class="good">✓ mode set to debug — reproduce, isolate, fix, verify</div>
+  </div>
+</section>
+
+<section id="behaviors" class="block wrap">
+  <h2 class="section-heading mono">01 — Behaviors</h2>
+  <div class="behaviors-grid" id="behaviors-grid"></div>
+</section>
+
+<section id="install" class="block wrap">
+  <h2 class="section-heading mono">02 — Install</h2>
+  <div class="install-list mono" id="install-list"></div>
+  <p class="install-note mono"># optional stronger scanning: brew install gitleaks semgrep</p>
+</section>
+
+<section class="block wrap" style="padding-top: 0; border-top: none;">
+  <div class="closing-inner">
+    <span class="closing-title">Open the docs &amp; try the block-explainer demo</span>
+    <a class="closing-cta" href="https://github.com/mustafahk27/aegis-harness/blob/main/docs/DEMO.md" target="_blank" rel="noopener">run &rarr;</a>
+  </div>
+</section>
+
+<footer class="site-footer">
+  <div class="footer-inner">
+    <span class="footer-note mono">aegis-harness — a personal coding harness for pi</span>
+    <div class="footer-links">
+      <a href="https://github.com/mustafahk27/aegis-harness" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://github.com/mustafahk27/aegis-harness/actions/workflows/ci.yml" target="_blank" rel="noopener">CI</a>
+      <a href="https://github.com/mustafahk27/aegis-harness/blob/main/docs/DEMO.md" target="_blank" rel="noopener">Docs</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+  const features = [
+    { name: 'Plan-first', desc: 'Pushes Pi to plan before changing code on anything non-trivial.' },
+    { name: 'Test & debug', desc: 'Prefers TDD and real debugging over guesswork.' },
+    { name: 'Risk block', desc: 'Blocks risky commands and secret-like values.' },
+    { name: 'Modes', desc: '/mode feature, debug, refactor, review — or /mode to open a picker.' },
+    { name: 'Explain', desc: 'Surfaces clear block reasons plus /why and /explain.' },
+    { name: 'Repo policy', desc: 'Tune behavior per repo without touching the extension itself.' },
+  ];
+
+  const behaviorsGrid = document.getElementById('behaviors-grid');
+  for (const f of features) {
+    const item = document.createElement('div');
+    item.innerHTML = `<div class="behavior-title">${f.name}</div><div class="behavior-desc">${f.desc}</div>`;
+    behaviorsGrid.appendChild(item);
+  }
+
+  const installSteps = [
+    { label: 'deps', cmd: 'npm install' },
+    { label: 'install', cmd: './install.sh' },
+    { label: 'scan (optional)', cmd: 'brew install gitleaks semgrep' },
+    { label: 'start', cmd: 'pi' },
+    { label: 'reload', cmd: '/reload' },
+  ];
+
+  const installList = document.getElementById('install-list');
+  installSteps.forEach((step, i) => {
+    const row = document.createElement('div');
+    row.className = 'install-step';
+    row.innerHTML = `
+      <span class="install-prompt">$</span>
+      <span class="install-cmd">${step.cmd}</span>
+      <span class="install-label">${step.label}</span>
+      <button class="copy-btn" type="button">[copy]</button>
+    `;
+    const button = row.querySelector('.copy-btn');
+    let resetTimer;
+    button.addEventListener('click', () => {
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(step.cmd).catch(() => {});
+      }
+      button.textContent = '[copied]';
+      clearTimeout(resetTimer);
+      resetTimer = setTimeout(() => { button.textContent = '[copy]'; }, 1400);
+    });
+    installList.appendChild(row);
+  });
+</script>
+
+</body>
+</html>
