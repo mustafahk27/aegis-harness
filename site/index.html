@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Aegis Harness — A disciplined way to let Pi touch your code</title>
+<meta name="description" content="Aegis Harness is a personal coding harness for Pi. It plans before changing code, prefers tests and debugging over guesswork, keeps diffs clean, and refuses risky actions.">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<nav class="site-nav">
+  <div class="brand">
+    <div class="brand-mark">Æ</div>
+    <span class="brand-name">Aegis Harness</span>
+  </div>
+  <div class="nav-links">
+    <a href="#behaviors">Behaviors</a>
+    <a href="#install">Install</a>
+    <a href="https://github.com/mustafahk27/aegis-harness/blob/main/docs/DEMO.md" target="_blank" rel="noopener">Docs</a>
+    <a class="nav-cta" href="https://github.com/mustafahk27/aegis-harness" target="_blank" rel="noopener">GitHub</a>
+  </div>
+</nav>
+
+<section class="hero wrap">
+  <div class="hero-copy">
+    <div class="eyebrow mono">A coding harness for Pi</div>
+    <h1>A disciplined way to let Pi touch your code.</h1>
+    <p>It plans before changing code, prefers tests and debugging over guesswork, keeps diffs clean, and refuses risky actions.</p>
+    <div class="hero-actions">
+      <a href="#install" class="btn btn-primary">npm install</a>
+      <a href="#behaviors" class="btn btn-secondary">See behaviors</a>
+    </div>
+  </div>
+  <div class="terminal mono">
+    <div class="dim">&gt; sudo rm -rf node_modules/.cache</div>
+    <div class="bad">✕ blocked — recursive delete outside scratch paths</div>
+    <div class="dim indent">fix: run /why for the full reason</div>
+    <div class="dim">&gt; /mode debug</div>
+    <div class="good">✓ mode set to debug — reproduce, isolate, fix, verify</div>
+  </div>
+</section>
+
+<section id="behaviors" class="block wrap">
+  <h2 class="section-heading mono">01 — Behaviors</h2>
+  <div class="behaviors-grid">
+    <div>
+      <div class="behavior-title">Plan-first</div>
+      <div class="behavior-desc">Pushes Pi to plan before changing code on anything non-trivial.</div>
+    </div>
+    <div>
+      <div class="behavior-title">Test &amp; debug</div>
+      <div class="behavior-desc">Prefers TDD and real debugging over guesswork.</div>
+    </div>
+    <div>
+      <div class="behavior-title">Risk block</div>
+      <div class="behavior-desc">Blocks risky commands and secret-like values.</div>
+    </div>
+    <div>
+      <div class="behavior-title">Modes</div>
+      <div class="behavior-desc">/mode feature, debug, refactor, review — or /mode to open a picker.</div>
+    </div>
+    <div>
+      <div class="behavior-title">Explain</div>
+      <div class="behavior-desc">Surfaces clear block reasons plus /why and /explain.</div>
+    </div>
+    <div>
+      <div class="behavior-title">Repo policy</div>
+      <div class="behavior-desc">Tune behavior per repo without touching the extension itself.</div>
+    </div>
+  </div>
+</section>
+
+<section id="install" class="block wrap">
+  <h2 class="section-heading mono">02 — Install</h2>
+  <div class="install-list mono">
+    <div class="install-step">
+      <span class="install-prompt">$</span>
+      <span class="install-cmd">npm install</span>
+      <span class="install-label">deps</span>
+      <button class="copy-btn" type="button" data-cmd="npm install">[copy]</button>
+    </div>
+    <div class="install-step">
+      <span class="install-prompt">$</span>
+      <span class="install-cmd">./install.sh</span>
+      <span class="install-label">install</span>
+      <button class="copy-btn" type="button" data-cmd="./install.sh">[copy]</button>
+    </div>
+    <div class="install-step">
+      <span class="install-prompt">$</span>
+      <span class="install-cmd">brew install gitleaks semgrep</span>
+      <span class="install-label">scan (optional)</span>
+      <button class="copy-btn" type="button" data-cmd="brew install gitleaks semgrep">[copy]</button>
+    </div>
+    <div class="install-step">
+      <span class="install-prompt">$</span>
+      <span class="install-cmd">pi</span>
+      <span class="install-label">start</span>
+      <button class="copy-btn" type="button" data-cmd="pi">[copy]</button>
+    </div>
+    <div class="install-step">
+      <span class="install-prompt">$</span>
+      <span class="install-cmd">/reload</span>
+      <span class="install-label">reload</span>
+      <button class="copy-btn" type="button" data-cmd="/reload">[copy]</button>
+    </div>
+  </div>
+  <p class="install-note mono"># optional stronger scanning: brew install gitleaks semgrep</p>
+</section>
+
+<section class="block wrap" style="padding-top: 0; border-top: none;">
+  <div class="closing-inner">
+    <span class="closing-title">Open the docs &amp; try the block-explainer demo</span>
+    <a class="closing-cta" href="https://github.com/mustafahk27/aegis-harness/blob/main/docs/DEMO.md" target="_blank" rel="noopener">run &rarr;</a>
+  </div>
+</section>
+
+<footer class="site-footer">
+  <div class="footer-inner">
+    <span class="footer-note mono">aegis-harness — a personal coding harness for pi</span>
+    <div class="footer-links">
+      <a href="https://github.com/mustafahk27/aegis-harness" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://github.com/mustafahk27/aegis-harness/actions/workflows/ci.yml" target="_blank" rel="noopener">CI</a>
+      <a href="https://github.com/mustafahk27/aegis-harness/blob/main/docs/DEMO.md" target="_blank" rel="noopener">Docs</a>
+    </div>
+  </div>
+</footer>
+
+<script src="js/main.js"></script>
+</body>
+</html>
