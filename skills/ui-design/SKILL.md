@@ -37,3 +37,7 @@ Use this skill to make interfaces clearer, calmer, and easier to use.
 - A prioritized list of UI improvements.
 - Concrete implementation notes for the next edit.
 - A clear recommendation when the design direction is ambiguous.
+
+## Reference
+
+See `references/ui-heuristics.md` for opinionated guidance on hierarchy, spacing, accessibility, and common frontend UI patterns.
