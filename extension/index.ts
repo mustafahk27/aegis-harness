@@ -95,6 +95,26 @@ ${current.reason}
 Next step: adjust the command, file change, or commit using the fix above, then try again.`;
   }
 
+  function formatFeedbackPacket(kind: "bad-block" | "missing-rule", note?: string): string {
+    const current = blockHistory[0];
+    const blockLines = current
+      ? [`Latest block: ${current.preview}`, `Block fix: ${current.fix}`]
+      : ["Latest block: none recorded yet", "Block fix: n/a"];
+    const responseLines = [
+      `Aegis Harness feedback: ${kind === "bad-block" ? "bad block" : "missing rule"}`,
+      `Policy: ${policy.displayName} (${policy.profile})`,
+      `Mode: ${activeMode}`,
+      `Gates: ${gatesEnabled ? "on" : "off"}`,
+      ...blockLines,
+      note ? `User note: ${note}` : undefined,
+      "",
+      kind === "bad-block"
+        ? "Please review whether the last block was too broad, explain what should have been allowed, and suggest the narrowest safe rule."
+        : "Please suggest the missing rule or check that should have caught this case, plus the smallest safe implementation.",
+    ].filter((line): line is string => Boolean(line));
+    return responseLines.join("\n");
+  }
+
   function formatCommandGuide(): string {
     return [
       "Aegis Harness commands:",
@@ -104,10 +124,11 @@ Next step: adjust the command, file change, or commit using the fix above, then 
       "/modes — list the available modes and the active one",
       "/why — explain the last block briefly",
       "/explain — explain the last block with more detail",
+      "/feedback — report a bad block or missing rule",
       "/gates on|off|status — control commit/secret/done gates",
       "/check — run the project checks",
       "/secreview — review the current diff for secret risks",
-      "Quick smoke test: run /mode, trigger a block, then ask /why.",
+      "Quick smoke test: run /mode, trigger a block, then ask /why. If something feels off, use /feedback.",
     ].join("\n");
   }
 
@@ -332,6 +353,44 @@ Next step: adjust the command, file change, or commit using the fix above, then 
     },
   });
 
+  pi.registerCommand("feedback", {
+    description: "Aegis Harness: report a bad block or missing rule with the current context",
+    handler: async (args, ctx) => {
+      const trimmed = (args ?? "").trim();
+      const [kindArg, ...noteParts] = trimmed.split(/\s+/);
+      const note = noteParts.join(" ").trim();
+      const chooseKind = async (): Promise<"bad-block" | "missing-rule" | undefined> => {
+        if (!ctx.hasUI || typeof ctx.ui.select !== "function") return undefined;
+        const selection = await ctx.ui.select("What kind of feedback do you want to report?", [
+          "Bad block — the harness blocked something that should have been allowed.",
+          "Missing rule — the harness missed a rule or check.",
+        ]);
+        if (!selection) return undefined;
+        return selection.startsWith("Bad block") ? "bad-block" : "missing-rule";
+      };
+
+      let kind: "bad-block" | "missing-rule" | undefined;
+      if (kindArg === "bad-block" || kindArg === "badblock" || kindArg === "block") kind = "bad-block";
+      else if (kindArg === "missing-rule" || kindArg === "missing" || kindArg === "rule") kind = "missing-rule";
+      else if (trimmed) kind = undefined;
+
+      if (!kind) kind = await chooseKind();
+      if (!kind) {
+        ctx.ui.notify("Feedback cancelled. Use /feedback bad-block or /feedback missing-rule.", "info");
+        return;
+      }
+
+      await ctx.waitForIdle();
+      pi.sendUserMessage(
+        `Please triage this Aegis Harness report and suggest the smallest safe fix.\n\n${formatFeedbackPacket(kind, note)}`,
+      );
+      ctx.ui.notify(
+        `Feedback queued for ${kind === "bad-block" ? "a bad block" : "a missing rule"}. I included the current policy, mode, gates, and latest block context.`,
+        "info",
+      );
+    },
+  });
+
   pi.registerCommand("modes", {
     description: "Aegis Harness: show the available working modes and the active one",
     handler: async (_args, ctx) => {
@@ -435,7 +494,7 @@ Next step: adjust the command, file change, or commit using the fix above, then 
         `Gates: ${gatesEnabled ? "on" : "OFF"}`,
         `Config: ${loadedPolicy.sourcePath ?? "default built-in policy"}`,
         `Security tools: ${missing.length ? `missing ${missing.join(", ")}` : "all optional tools present or disabled"}`,
-        "Quick help: use /help for the command guide and smoke test.",
+        "Quick help: use /help for the command guide, /feedback to report a bad block or missing rule.",
       ];
       if (loadedPolicy.warnings.length) lines.push(`Warnings: ${loadedPolicy.warnings.join(" | ")}`);
       ctx.ui.notify(lines.join("\n"), loadedPolicy.warnings.length ? "warning" : "info");

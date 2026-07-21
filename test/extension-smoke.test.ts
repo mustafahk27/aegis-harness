@@ -291,6 +291,10 @@ describe("extension smoke tests", () => {
     expect(api._commands.has("help")).toBe(true);
   });
 
+  it("registers /feedback command", () => {
+    expect(api._commands.has("feedback")).toBe(true);
+  });
+
   it("registers /mode command", () => {
     expect(api._commands.has("mode")).toBe(true);
   });
@@ -361,6 +365,7 @@ describe("extension smoke tests", () => {
     expect(ctx.notifications[0].msg).toMatch(/Config:/i);
     expect(ctx.notifications[0].msg).toMatch(/Gates:/i);
     expect(ctx.notifications[0].msg).toMatch(/Quick help:/i);
+    expect(ctx.notifications[0].msg).toMatch(/\/feedback/i);
   });
 
   it("reports /help with the command guide", async () => {
@@ -374,6 +379,7 @@ describe("extension smoke tests", () => {
     expect(ctx.notifications[0].msg).toMatch(/\/help/i);
     expect(ctx.notifications[0].msg).toMatch(/\/status/i);
     expect(ctx.notifications[0].msg).toMatch(/Quick smoke test/i);
+    expect(ctx.notifications[0].msg).toMatch(/\/feedback/i);
   });
 
   it("reports /modes with the active mode and available options", async () => {
@@ -504,6 +510,48 @@ describe("extension smoke tests", () => {
     const whyCtx = makeCtx();
     await api._commands.get("why")!.handler("", whyCtx as never);
     expect(whyCtx.notifications[0].msg).toMatch(/No recent block/i);
+  });
+
+  it("reports feedback with the latest block context", async () => {
+    const ctx = {
+      ...makeCtx("/tmp/aegis-harness-smoke", true),
+      waitForIdle: async () => {},
+    };
+
+    await api._trigger("tool_call", {
+      type: "tool_call",
+      toolCallId: "tc-feedback-1",
+      toolName: "bash",
+      input: { command: "sudo ls" },
+    });
+
+    await api._commands.get("feedback")!.handler("bad-block please allow project-local inspection", ctx as never);
+
+    expect(api._sentUserMessages.at(-1)).toMatch(/Aegis Harness feedback: bad block/i);
+    expect(api._sentUserMessages.at(-1)).toMatch(/Policy:/i);
+    expect(api._sentUserMessages.at(-1)).toMatch(/Mode:/i);
+    expect(api._sentUserMessages.at(-1)).toMatch(/Gates:/i);
+    expect(api._sentUserMessages.at(-1)).toMatch(/Latest block:/i);
+    expect(api._sentUserMessages.at(-1)).toMatch(/sudo ls/i);
+    expect(api._sentUserMessages.at(-1)).toMatch(/User note:/i);
+    expect(ctx.notifications.at(-1)?.msg).toMatch(/Feedback queued/i);
+  });
+
+  it("opens a picker for /feedback when no args are passed", async () => {
+    const base = makeCtx("/tmp/aegis-harness-smoke", true);
+    const ctx = {
+      ...base,
+      waitForIdle: async () => {},
+      ui: {
+        ...base.ui,
+        select: async () => "Missing rule — the harness missed a rule or check.",
+      },
+    };
+
+    await api._commands.get("feedback")!.handler("", ctx as never);
+
+    expect(api._sentUserMessages.at(-1)).toMatch(/Aegis Harness feedback: missing rule/i);
+    expect(ctx.notifications.at(-1)?.msg).toMatch(/Feedback queued/i);
   });
 
   it("/gates off and /gates on toggle gatesEnabled; sudo remains blocked", async () => {
